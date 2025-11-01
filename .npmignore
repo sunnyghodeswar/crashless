@@ -1,0 +1,10 @@
+# Ignore development files
+test/
+node_modules/
+.vscode/
+.idea/
+coverage/
+.env
+.gitignore
+npm-debug.log
+yarn-error.log

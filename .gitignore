@@ -1,0 +1,16 @@
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
+
+# Build
+dist/
+coverage/
+.env
