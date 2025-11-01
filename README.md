@@ -65,7 +65,14 @@ app.listen(3000);
 
 That's it! Your app is now crashless. 🎉
 
+### Try It Online
+
+🚀 **[Try on StackBlitz](https://stackblitz.com/github/sunnyghodeswar/node-express-crashless?file=server.js)**  
+💻 **[Try on CodeSandbox](https://codesandbox.io/p/github/sunnyghodeswar/node-express-crashless?file=server.js)**  
+📚 **[View Full Examples Repository](https://github.com/sunnyghodeswar/node-express-crashless)** - Complete examples showcasing all features
+
 ---
+
 
 ## ✨ Features
 
@@ -436,6 +443,9 @@ All errors return a consistent JSON structure:
 
 ## 💡 Examples
 
+> 📚 **📁 Full Examples Repository:** Check out the **[crashless-examples](https://github.com/sunnyghodeswar/crashless-examples)** repository for comprehensive examples including REST APIs, authentication, database integration, telemetry setup, and more production-ready patterns.  
+> 📁 **Quick Example:** See [`example.js`](./example.js) for a basic example in this repository.
+
 ### Example 1: API with Database
 
 ```js
@@ -533,6 +543,54 @@ app.get('/protected', async (req, res) => {
 ### What about errors thrown in middleware?
 
 **They're caught too!** As long as you've called `handleAsync(app)` and mounted Crashless middleware, all errors are handled.
+
+---
+
+## 🎯 Why Choose Crashless?
+
+### vs. Existing Solutions
+
+Other packages like `express-async-handler` and `express-async-errors` catch async errors, but that's only 20% of the problem. Crashless solves the full picture:
+
+| Feature | express-async-handler | express-async-errors | Crashless |
+|---------|----------------------|---------------------|-----------|
+| Catches async errors | ✅ (manual wrap each route) | ✅ | ✅ |
+| Automatic (no wrapping) | ❌ | ✅ | ✅ |
+| Catches sync errors | ✅ | ✅ | ✅ |
+| Standardized error format | ❌ | ❌ | ✅ |
+| Production message masking | ❌ | ❌ | ✅ |
+| Telemetry/monitoring hooks | ❌ | ❌ | ✅ |
+| Request context logging | ❌ | ❌ | ✅ |
+| Custom error creation helper | ❌ | ❌ | ✅ |
+| Security-first defaults | ❌ | ❌ | ✅ |
+
+**The Difference:**
+
+- **express-async-errors** = Catches errors (20% of the solution)
+- **Crashless** = Catches errors + Professional handling + Monitoring + Security (100% solution)
+
+**What you get with Crashless that others don't provide:**
+
+🎯 Consistent JSON error responses across your entire API  
+🔒 Automatic sanitization of sensitive data in production  
+📊 Built-in telemetry integration for Sentry, Datadog, etc.  
+📝 Automatic request context logging (method, path, timestamp, user-agent)  
+🛡️ Production-safe by default (masks passwords, database URLs, stack traces)
+
+---
+
+### vs. Manual Error Handling
+
+| Challenge | Without Crashless | With Crashless |
+|-----------|------------------|----------------|
+| **Server crashes from async errors** | ❌ Need try/catch everywhere or risk crashes | ✅ Automatically caught - never crash |
+| **Sensitive info leaked to users** | ❌ Stack traces expose passwords, paths | ✅ Auto-masked in production |
+| **Inconsistent error responses** | ❌ Every endpoint returns different format | ✅ Unified JSON structure |
+| **No visibility into production errors** | ❌ Manual logging, no alerts | ✅ Built-in telemetry hooks |
+| **Verbose, repetitive code** | ❌ Try/catch blocks clutter every route | ✅ Clean, minimal code |
+| **Hard to debug production issues** | ❌ No context when errors occur | ✅ Automatic request metadata logging |
+| **Security vulnerabilities** | ❌ Easy to accidentally expose secrets | ✅ Production-safe by default |
+| **Team onboarding** | ❌ New devs forget error handling | ✅ Safety net catches mistakes |
 
 ---
 
