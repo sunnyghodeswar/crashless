@@ -1,0 +1,28 @@
+{
+  "name": "crashless",
+  "version": "0.1.0",
+  "description": "Crashless — stability, security, and smart logging for Express.",
+  "main": "index.js",
+  "type": "module",
+  "keywords": [
+    "express",
+    "middleware",
+    "error-handler",
+    "async-errors",
+    "crashless",
+    "logging",
+    "stability",
+    "security",
+    "telemetry"
+  ],
+  "author": "Sunny Ghodeswar <your-email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sunnyghodeswar/crashless.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sunnyghodeswar/crashless/issues"
+  },
+  "homepage": "https://github.com/sunnyghodeswar/crashless#readme"
+}
