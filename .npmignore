@@ -1,10 +1,50 @@
-# Ignore development files
-test/
+# Dependencies
 node_modules/
+
+# Testing and development files
+test/
+*.test.js
+*.spec.js
+test/
+coverage/
+.nyc_output/
+
+# Development documentation
+TEST_SCRIPTS.md
+CLEANUP.md
+test/README.md
+
+# Demo files
+test/manual-demo.js
+test/manual-test.sh
+
+# IDE and editor files
 .vscode/
 .idea/
-coverage/
+*.swp
+*.swo
+*~
+
+# Environment and logs
 .env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Build and config
+dist/
+build/
+*.tsbuildinfo
+tsconfig.json
+
+# Git
+.git/
 .gitignore
-npm-debug.log
-yarn-error.log
+.github/
+
+# OS files
+.DS_Store
+Thumbs.db
