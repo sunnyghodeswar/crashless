@@ -1,21 +1,28 @@
 {
   "name": "crashless",
-  "version": "0.1.0",
-  "description": "Crashless — stability, security, and smart logging for Express.",
-  "main": "index.js",
+  "version": "0.2.0",
+  "description": "Crashless — stability, security, and smart logging for Express & Vegaa.",
   "type": "module",
+  "main": "src/index.js",
+  "types": "index.d.ts",
   "keywords": [
     "express",
+    "vegaa",
     "middleware",
     "error-handler",
     "async-errors",
     "crashless",
     "logging",
     "stability",
-    "security",
     "telemetry"
   ],
-  "author": "Sunny Ghodeswar <your-email@example.com>",
+  "scripts": {
+    "test": "NODE_ENV=test mocha --require ./test/setup.js --recursive",
+    "test:demo": "bash test/manual-test.sh",
+    "demo": "node test/manual-demo.js",
+    "demo:prod": "NODE_ENV=production node test/manual-demo.js"
+  },
+  "author": "Sunny Ghodeswar",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,5 +31,12 @@
   "bugs": {
     "url": "https://github.com/sunnyghodeswar/crashless/issues"
   },
-  "homepage": "https://github.com/sunnyghodeswar/crashless#readme"
+  "homepage": "https://github.com/sunnyghodeswar/crashless#readme",
+  "devDependencies": {
+    "chai": "^5.3.3",
+    "express": "^4.21.2",
+    "mocha": "^11.7.4",
+    "supertest": "^7.1.4",
+    "vegaa": "^1.1.4"
+  }
 }
