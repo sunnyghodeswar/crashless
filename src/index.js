@@ -13,13 +13,8 @@
  */
 
 // Re-export from crashless.js (main implementation)
-export {
-  default,
-  crashlessFactory,
-  createError,
-  handleAsync,
-  registerExporter
-} from './crashless.js';
+export { default } from './crashless.js';
+export { createError, registerExporter } from './crashless.js';
 
 // Re-export metrics utilities
 export {
@@ -31,3 +26,23 @@ export {
 
 // Re-export dashboard HTML generator
 export { getDashboardHTML } from './dashboard.js';
+
+// Re-export tracing utilities
+export {
+  startSpan,
+  endSpan,
+  addSpanAttributes,
+  setSpanStatus,
+  getTraceContext,
+  runInTraceContext,
+  getTraces,
+  exportOTLP,
+  configureTracing,
+  getTracingStats,
+  traceAsync,
+  traceSync,
+  addSpanEvent
+} from './tracing.js';
+
+// Re-export trace context API
+export { trace } from './trace-context.js';

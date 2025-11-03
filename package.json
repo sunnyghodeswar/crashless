@@ -1,7 +1,7 @@
 {
   "name": "crashless",
-  "version": "0.2.1",
-  "description": "Crashless — stability, security, and smart logging for Express & Vegaa.",
+  "version": "0.3.0",
+  "description": "Crashless — stability, security, smart logging, and built-in observability for Express & Vegaa.",
   "type": "module",
   "main": "src/index.js",
   "types": "index.d.ts",
@@ -14,13 +14,27 @@
     "crashless",
     "logging",
     "stability",
-    "telemetry"
+    "telemetry",
+    "observability",
+    "metrics",
+    "monitoring",
+    "dashboard",
+    "prometheus"
   ],
   "scripts": {
     "test": "NODE_ENV=test mocha --require ./test/setup.js --recursive",
     "test:demo": "bash test/manual-test.sh",
     "demo": "node test/manual-demo.js",
-    "demo:prod": "NODE_ENV=production node test/manual-demo.js"
+    "demo:prod": "NODE_ENV=production node test/manual-demo.js",
+    "example:oneliner": "node examples/example-one-liner.js",
+    "example:basic": "node examples/example-basic.js",
+    "example:production": "NODE_ENV=production node examples/example-production.js",
+    "example:builtin": "node examples/example-builtin-engine.js",
+    "example:prometheus": "node examples/example-prometheus-engine.js",
+    "example:otel": "node examples/example-otel-engine.js",
+    "example:exporters": "node examples/example-exporters.js",
+    "example:full": "node examples/example-full-featured.js",
+    "example:tracing": "node examples/tracing-demo.js"
   },
   "author": "Sunny Ghodeswar",
   "license": "MIT",
