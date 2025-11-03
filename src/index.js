@@ -20,3 +20,14 @@ export {
   handleAsync,
   registerExporter
 } from './crashless.js';
+
+// Re-export metrics utilities
+export {
+  getMetrics,
+  exportPrometheus,
+  exportOpenTelemetry,
+  resetMetrics
+} from './metrics.js';
+
+// Re-export dashboard HTML generator
+export { getDashboardHTML } from './dashboard.js';

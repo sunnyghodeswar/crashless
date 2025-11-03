@@ -1,349 +1,393 @@
-/**
+/*
  * Crashless — stability, security, and smart logging for Express & Vegaa.
  * Zero-dependency middleware that prevents servers from crashing on errors.
+ * Now with built-in observability, metrics, and automatic async error handling.
  *
  * @module crashless
- *
- * @example
- * import crashless from 'crashless';
- *
- * const app = express();
- * crashless.handleAsync(app);  // Optional: enable async error handling
- * app.use(crashless());        // Required: mount error middleware (last)
  */
 
-/**
- * Default configuration options
- * @private
- */
+import {
+  recordRequest,
+  recordError,
+  getMetrics,
+  exportPrometheus,
+  exportOpenTelemetry
+} from './metrics.js';
+import { getDashboardHTML } from './dashboard.js';
+
+/* ------------------------ Defaults & Globals --------------------------- */
 const DEFAULTS = {
-  handleAsync: false,
-  maskMessages: true,
+  handleAsync: true,
+  maskMessages: false,
   showStack: process.env.NODE_ENV !== 'production',
   log: true,
   defaultStatus: 500,
+  appName: 'Crashless API',
+  telemetry: {
+    engine: 'builtin',
+    dashboard: true,
+    route: '/_crashless',
+    exportInterval: 5000,
+    version: 'v2',
+  },
 };
 
-/**
- * Global registry of telemetry exporters
- * @private
- */
+let globalTelemetryConfig = { ...DEFAULTS.telemetry };
 const exporters = new Map();
 
-/**
- * Register a global telemetry exporter function.
- * Exporter will be called asynchronously for every error that occurs.
- *
- * @param {string} name - Unique name for the exporter
- * @param {Function} fn - Exporter function (err, meta) => void
- * @throws {Error} If exporter is not a function
- *
- * @example
- * crashless.registerExporter('sentry', (err, meta) => {
- *   Sentry.captureException(err, { tags: { path: meta.path } });
- * });
- */
+/* ------------------------ Helpers: exporters --------------------------- */
 function registerExporter(name, fn) {
-  if (typeof fn !== 'function') {
-    throw new Error('exporter must be a function');
-  }
+  if (typeof fn !== 'function') throw new Error('exporter must be a function');
   exporters.set(name, fn);
 }
 
-/**
- * Invoke all registered exporters asynchronously.
- * Errors in exporters are silently swallowed to prevent cascading failures.
- *
- * @param {Error} err - The error object
- * @param {Object} meta - Request metadata
- * @private
- */
 function callExporters(err, meta) {
   for (const fn of exporters.values()) {
     try {
-      // Fire-and-forget: non-blocking, errors in exporters don't crash the app
-      setImmediate(() => {
+      queueMicrotask(() => {
         try {
           fn(err, meta);
-        } catch (e) {
-          // Silently swallow exporter errors to prevent cascading failures
-        }
+        } catch (_) {}
       });
-    } catch (e) {
-      // Silently swallow synchronous errors
-    }
+    } catch (_) {}
   }
 }
 
-/**
- * Normalize error object for consistent logging and telemetry.
- * Extracts standardized fields from any error type.
- *
- * @param {Error|Object|null} err - Error object to normalize
- * @returns {Object} Normalized error with name, message, code, status, details
- * @private
- */
+/* ------------------------ Helpers: errors ------------------------------ */
 function normalizeError(err) {
+  if (err === null || err === undefined) return { name: 'Error', message: 'Unknown error' };
+  if (typeof err === 'string') return { name: 'Error', message: err };
+  if (typeof err === 'number') return { name: 'Error', message: `Error code: ${err}` };
+  if (typeof err === 'boolean') return { name: 'Error', message: `Error: ${err}` };
+
   const normalized = {
-    name: err && err.name ? String(err.name) : 'Error',
-    message: err && err.message ? String(err.message) : 'Unknown error',
+    name: err.name ? String(err.name) : 'Error',
+    message: err.message ? String(err.message) : String(err),
   };
-  
-  // Only include optional fields if they exist to avoid undefined clutter
-  if (err && err.code) normalized.code = String(err.code);
-  if (err && typeof err.status === 'number') normalized.status = err.status;
-  if (err && err.details !== undefined) normalized.details = err.details;
-  
+  if (err.code) normalized.code = String(err.code);
+  if (typeof err.status === 'number') normalized.status = err.status;
+  if (err.details !== undefined) normalized.details = err.details;
   return normalized;
 }
 
-/**
- * Create a standardized HTTP error object with status code and error code.
- *
- * @param {string} message - Error message
- * @param {number} [status=500] - HTTP status code
- * @param {string} [code='ERR_INTERNAL'] - Machine-readable error code
- * @param {*} [details] - Optional additional error details
- * @returns {Error} Error object with status, code, and optional details properties
- *
- * @example
- * throw crashless.createError('User not found', 404, 'USER_NOT_FOUND');
- * throw crashless.createError('Validation failed', 422, 'VALIDATION_ERROR', { field: 'email' });
- */
 function createError(message, status = 500, code = 'ERR_INTERNAL', details = undefined) {
   const e = new Error(message);
+  e.name = 'CrashlessError';
   e.status = status;
   e.code = code;
+  e.isCrashless = true;
   if (details !== undefined) e.details = details;
   return e;
 }
 
-/**
- * Patch Express/Vegaa app to automatically catch async route handler errors.
- * Wraps async route handlers so promise rejections are forwarded to error middleware.
- *
- * @param {Function} app - Express or Vegaa app instance
- * @param {Object} [options={}] - Configuration options
- * @param {string[]} [options.methods] - HTTP methods to patch (default: all common methods)
- * @throws {Error} If app is not a valid Express/Vegaa instance
- *
- * @example
- * crashless.handleAsync(app);
- * crashless.handleAsync(app, { methods: ['get', 'post'] });
- */
-function handleAsync(app, options = {}) {
-  if (!app || typeof app !== 'function') {
-    throw new Error('handleAsync requires an Express or Vegaa app instance');
-  }
-  
-  // Prevent double-patching
-  if (app.__crashlessPatched) return;
-  
-  const methods = options.methods || ['get', 'post', 'put', 'delete', 'patch', 'all', 'use'];
-  
-  for (const m of methods) {
-    // Some apps might not have all methods (e.g., Vegaa), skip safely
-    if (!app[m]) continue;
-    
-    const original = app[m].bind(app);
-    
-    // Replace method with wrapper that auto-catches async errors
-    app[m] = function (...args) {
-      const wrapped = args.map(fn => {
-        // Skip non-function arguments (e.g., route paths)
-        if (typeof fn !== 'function') return fn;
-        
-        // Skip if already wrapped to prevent double-wrapping
-        if (fn.__crashlessWrapped) return fn;
-        
-        // Detect async functions by constructor name
-        const isAsync = fn.constructor && fn.constructor.name === 'AsyncFunction';
-        if (!isAsync) return fn;
-        
-        // Wrap async function to catch promise rejections
-        const wrappedFn = function (req, res, next) {
-          Promise.resolve(fn(req, res, next)).catch(next);
-        };
-        
-        // Mark as wrapped to prevent double-wrapping
-        wrappedFn.__crashlessWrapped = true;
-        return wrappedFn;
-      });
-      
-      return original(...wrapped);
+/* ------------------------ Auto-patch Express --------------------------- */
+(async function tryPatchExpressGlobal() {
+  try {
+    const expressMod = await import('express').catch(() => null);
+    if (!expressMod) return;
+    const express = expressMod.default || expressMod;
+    if (!express || !express.application) return;
+
+    const appProto = express.application;
+    if (appProto.__crashlessUsePatched) return;
+
+    const originalUse = appProto.use;
+    appProto.use = function (...args) {
+      for (const mw of args) {
+        if (mw && mw.__isCrashlessMiddleware) {
+          try {
+            mw.mountRoutes && mw.mountRoutes(this);
+          } catch (_) {}
+          break;
+        }
+      }
+      return originalUse.apply(this, args);
     };
-  }
-  
-  // Mark app as patched to prevent double-patching
-  Object.defineProperty(app, '__crashlessPatched', {
-    value: true,
-    configurable: false,
-    enumerable: false,
-    writable: false,
-  });
-}
 
-/**
- * Factory function that creates Express error-handling middleware.
- * Middleware must be mounted last in the middleware stack.
- *
- * @param {Object} [opts={}] - Configuration options
- * @param {boolean} [opts.maskMessages=true] - Mask sensitive messages in production
- * @param {boolean} [opts.log=true] - Enable console error logging
- * @param {number} [opts.defaultStatus=500] - Default HTTP status for errors without status
- * @param {Function} [opts.onTelemetry] - Callback for telemetry (err, meta) => void
- * @returns {Function} Express error-handling middleware (err, req, res, next)
- *
- * @example
- * app.use(crashless());
- * app.use(crashless({ log: false, maskMessages: true }));
- */
-function crashlessFactory(opts = {}) {
-  const options = Object.assign({}, DEFAULTS, opts);
+    Object.defineProperty(appProto, '__crashlessUsePatched', {
+      value: true,
+      configurable: false,
+      enumerable: false,
+      writable: false,
+    });
+  } catch (_) {}
+})();
 
-  /**
-   * Express error-handling middleware (4-arg signature required by Express)
-   * @param {Error} err - Error object
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   * @param {Function} next - Express next function
-   */
-  function crashless(err, req, res, next) {
-    // If response headers already sent, forward to default error handler
-    if (res.headersSent) {
-      return next(err);
+/* ------------------------------------------------------------------
+ * Crashless Express Async Auto-Patch
+ * Automatically catches async route errors globally.
+ * ------------------------------------------------------------------ */
+(async function crashlessAsyncLayerPatch() {
+  try {
+    const expressMod = await import('express').catch(() => null);
+    if (!expressMod) return;
+    const express = expressMod.default || expressMod;
+    if (!express || !express.Router) return;
+
+    let Layer;
+    try {
+      const mod = await import('express/lib/router/layer.js');
+      Layer = mod.default || mod;
+    } catch {
+      try {
+        Layer = (await import('express/lib/router/layer')).default;
+      } catch {
+        console.warn('⚠️ Crashless async patch: cannot find express Layer');
+        return;
+      }
     }
+
+    if (!Layer || Layer.__crashlessPatched) return;
+
+    const originalHandleRequest = Layer.prototype.handle_request;
+    Layer.prototype.handle_request = function (req, res, next) {
+      const fn = this.handle;
+      if (!fn) return originalHandleRequest.call(this, req, res, next);
+      try {
+        const result = fn(req, res, next);
+        if (result && typeof result.then === 'function') {
+          return result.catch(next);
+        }
+        return result;
+      } catch (err) {
+        next(err);
+      }
+    };
+
+    Layer.__crashlessPatched = true;
+    console.log('✅ Crashless async support enabled (Layer patch)');
+  } catch (err) {
+    console.warn('⚠️ Crashless async patch failed:', err.message);
+  }
+})();
+
+/* ------------------------ Middleware Factory --------------------------- */
+function crashlessFactory(opts = {}) {
+  const telemetryConfig = { ...DEFAULTS.telemetry, ...globalTelemetryConfig, ...(opts.telemetry || {}) };
+  const options = {
+    ...DEFAULTS,
+    ...opts,
+    telemetry: telemetryConfig,
+    enableMetrics: opts.enableMetrics !== undefined ? opts.enableMetrics : telemetryConfig.engine !== 'none',
+    enableDashboard: opts.enableDashboard !== undefined ? opts.enableDashboard : telemetryConfig.dashboard,
+    dashboardPath: opts.dashboardPath || telemetryConfig.route,
+    metricsPath: opts.metricsPath || '/metrics.json',
+  };
+
+  function requestTracker(req, res, next) {
+    req.__crashlessStartTime = Date.now();
+    if (!options.enableMetrics || options.telemetry.engine === 'none') return next();
+
+    if (res.__crashlessEndWrapped) return next();
+    res.__crashlessEndWrapped = true;
+    res.__crashlessRequestRecorded = false; // Flag to prevent double counting
+
+    const originalEnd = res.end.bind(res);
+    res.end = function (...args) {
+      // CRITICAL: If error handler already recorded this request, skip to prevent double counting
+      if (res.__crashlessErrorHandled && res.__crashlessRequestRecorded) {
+        return originalEnd(...args);
+      }
+      
+      const latency = Date.now() - req.__crashlessStartTime;
+      const status = res.statusCode || 200;
+      
+      // Only record if error handler hasn't already done it
+      if (!res.__crashlessErrorHandled) {
+        queueMicrotask(() => {
+          try {
+            const path = req.route ? req.route.path : req.path || req.originalUrl || 'unknown';
+            recordRequest(req.method || 'UNKNOWN', path, status, latency);
+          } catch (_) {}
+        });
+      }
+      
+      return originalEnd(...args);
+    };
+    next();
+  }
+
+  function crashlessErrorHandler(err, req, res, next) {
+    if (res.headersSent) return next(err);
+
+    res.__crashlessErrorHandled = true;
 
     const normalized = normalizeError(err || {});
     const status = normalized.status || options.defaultStatus || 500;
-    
-    // Check environment at request time for dynamic stack trace control
     const exposeStack = options.showStack && process.env.NODE_ENV !== 'production';
 
-    // Mask sensitive messages in production unless clientMessage is provided
     let clientMessage = normalized.message || 'Internal server error';
     if (options.maskMessages && process.env.NODE_ENV === 'production') {
-      clientMessage = (err && err.clientMessage) 
-        ? String(err.clientMessage) 
-        : 'Internal server error';
+      clientMessage = err && err.clientMessage ? String(err.clientMessage) : 'Internal server error';
     }
 
-    // Build standardized error response payload
     const payload = {
       success: false,
       message: clientMessage,
-      code: normalized.code || `ERR_${String(status)}`,
+      code: normalized.code || `ERR_${String(status)}`
     };
+    if (exposeStack && err && err.stack) payload.stack = err.stack;
 
-    // Include stack trace only in non-production environments
-    if (exposeStack && err && err.stack) {
-      payload.stack = err.stack;
+    const latency = req.__crashlessStartTime ? Date.now() - req.__crashlessStartTime : 0;
+
+    if (options.enableMetrics && options.telemetry.engine !== 'none') {
+      const path = req.path || (req.route && req.route.path) || req.originalUrl || 'unknown';
+      const errorCode = normalized.code || `ERR_${String(status)}`;
+
+      // ATOMIC OPERATION: Record request and error together to prevent double counting
+      // Mark request as recorded BEFORE calling recordRequest to prevent res.end() from recording again
+      res.__crashlessRequestRecorded = true;
+      
+      try {
+        // Record the request (this will NOT auto-record error due to skipErrorRecording flag)
+        recordRequest(req.method || 'UNKNOWN', path, status, latency, true); // true = skipErrorRecording
+
+        // Record the error explicitly with proper error object
+        let errorInstance = err instanceof Error ? err : new Error(normalized.message || 'Unknown error');
+        errorInstance.name = normalized.name || errorInstance.name || 'Error';
+        errorInstance.code = errorCode;
+        errorInstance.status = normalized.status || status;
+        if (!errorInstance.stack && err && err.stack) errorInstance.stack = err.stack;
+
+        recordError(errorInstance, {
+          method: req.method,
+          path,
+          status,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.error('[Crashless] Failed to record error:', e);
+      }
     }
 
-    // Send error response (with fallback for edge cases)
     try {
       res.status(Number(status)).json(payload);
-    } catch (e) {
-      // Fallback to plain text if JSON serialization fails
+    } catch {
       try {
         res.status(500).send('Internal server error');
-      } catch (e2) {
-        // Silently fail if response cannot be sent
-      }
+      } catch {}
     }
 
-    // Async logging & telemetry (non-blocking, fire-and-forget)
-    if (options.log) {
-      setImmediate(() => {
-        try {
-          const meta = {
-            method: req && req.method,
-            path: req && req.path,
-            status,
-            timestamp: new Date().toISOString(),
-          };
-          
-          // Include optional metadata if available
-          if (req && req.id) meta.requestId = req.id;
-          if (req && req.get) {
-            const ua = req.get('user-agent');
-            if (ua) meta.userAgent = ua;
-          }
-          
-          // Log error with full context
-          console.error('[Crashless] Error:', normalized, { stack: err && err.stack }, meta);
-          
-          // Invoke registered exporters
-          callExporters(err, meta);
-          
-          // Invoke user-provided telemetry callback
-          if (typeof options.onTelemetry === 'function') {
-            try {
-              options.onTelemetry(err, meta);
-            } catch (e) {
-              // Silently ignore telemetry callback errors
-            }
-          }
-        } catch (e) {
-          // Silently swallow logger errors to prevent cascading failures
-        }
-      });
-    } else {
-      // Even without logging, call exporters if they exist (telemetry-only mode)
-      if (exporters.size > 0 || typeof options.onTelemetry === 'function') {
-        setImmediate(() => {
-          const meta = {
-            method: req && req.method,
-            path: req && req.path,
-            status,
-            timestamp: new Date().toISOString(),
-          };
-          
-          // Include optional metadata if available
-          if (req && req.id) meta.requestId = req.id;
-          if (req && req.get) {
-            const ua = req.get('user-agent');
-            if (ua) meta.userAgent = ua;
-          }
-          
-          try {
-            callExporters(err, meta);
-          } catch (_) {
-            // Silently ignore exporter errors
-          }
-          
-          try {
-            if (typeof options.onTelemetry === 'function') {
-              options.onTelemetry(err, meta);
-            }
-          } catch (_) {
-            // Silently ignore telemetry callback errors
-          }
-        });
+    queueMicrotask(() => {
+      const meta = {
+        method: req.method,
+        path: req.path,
+        status,
+        timestamp: new Date().toISOString(),
+        latency,
+        app: { name: options.appName, env: process.env.NODE_ENV || 'development' },
+        telemetry: { engine: options.telemetry.engine, version: 'v1.0' },
+      };
+      if (req.id) meta.requestId = req.id;
+      if (req.get) {
+        const ua = req.get('user-agent');
+        if (ua) meta.userAgent = ua;
       }
-    }
+
+      if (options.log) console.error('[Crashless] Error:', normalized, { stack: err && err.stack }, meta);
+      callExporters(err, meta);
+      if (typeof options.onTelemetry === 'function') {
+        try {
+          options.onTelemetry(err, meta);
+        } catch (_) {}
+      }
+    });
   }
 
-  // Attach helper methods to middleware for convenience
-  crashless.createError = createError;
-  crashless.registerExporter = registerExporter;
-  crashless.handleAsync = handleAsync;
+  let routesMounted = false;
 
-  return crashless;
+  function crashlessWrapper(err, req, res, next) {
+    // 4-arg signature = error handler
+    if (err instanceof Error || (err && err.message)) return crashlessErrorHandler(err, req, res, next);
+    
+    // 3-arg signature = regular middleware (request tracker)
+    const actualReq = err;
+    const actualRes = req;
+    const actualNext = res;
+    
+    // Auto-mount routes on first request
+    if (!routesMounted && actualReq.app) {
+      routesMounted = true;
+      try {
+        crashlessWrapper.mountRoutes(actualReq.app);
+      } catch (e) {
+        console.warn('[Crashless] Failed to auto-mount routes:', e.message);
+      }
+    }
+    
+    return requestTracker(actualReq, actualRes, actualNext);
+  }
+
+  crashlessWrapper.createError = createError;
+  crashlessWrapper.registerExporter = registerExporter;
+  crashlessWrapper.__isCrashlessMiddleware = true;
+
+  crashlessWrapper.mountRoutes = function (app) {
+    try {
+      if (options.enableDashboard && options.telemetry.dashboard) {
+        const basePath = options.dashboardPath || '/_crashless';
+        
+        // Main dashboard (defaults to system overview)
+        app.get(basePath, (req, res) =>
+          res.send(getDashboardHTML(basePath, options.maskMessages, options.appName))
+        );
+        app.get(`${basePath}/system`, (req, res) =>
+          res.send(getDashboardHTML(`${basePath}/system`, options.maskMessages, options.appName))
+        );
+        app.get(`${basePath}/crashes`, (req, res) =>
+          res.send(getDashboardHTML(`${basePath}/crashes`, options.maskMessages, options.appName))
+        );
+        app.get(`${basePath}/errors`, (req, res) =>
+          res.send(getDashboardHTML(`${basePath}/crashes`, options.maskMessages, options.appName))
+        );
+        app.get(`${basePath}/performance`, (req, res) =>
+          res.send(getDashboardHTML(`${basePath}/performance`, options.maskMessages, options.appName))
+        );
+      }
+      if (options.enableMetrics && options.telemetry.engine !== 'none') {
+        app.get(options.metricsPath || '/metrics.json', (req, res) => {
+          try {
+            res.json(getMetrics());
+          } catch {
+            res.status(500).json({ error: 'Failed to get metrics' });
+          }
+        });
+        if (['prometheus', 'builtin'].includes(options.telemetry.engine)) {
+          app.get('/metrics', (req, res) => {
+            try {
+              res.setHeader('Content-Type', 'text/plain; version=0.0.4');
+              res.send(exportPrometheus());
+            } catch {
+              res.status(500).send('# Error generating Prometheus metrics\\n');
+            }
+          });
+        }
+        if (options.telemetry.engine === 'otel') {
+          app.get('/metrics/otel', (req, res) => {
+            try {
+              res.json(exportOpenTelemetry());
+            } catch {
+              res.status(500).json({ error: 'Failed to export OpenTelemetry metrics' });
+            }
+          });
+        }
+      }
+    } catch (_) {}
+  };
+
+  return crashlessWrapper;
 }
 
-/**
- * Default export: factory function with helper methods attached.
- * This allows both `crashless()` and `crashless.createError()` usage patterns.
- */
-function defaultCrashless(opts) {
-  return crashlessFactory(opts);
-}
+/* ------------------------ Attach Helpers --------------------------- */
+crashlessFactory.createError = createError;
+crashlessFactory.registerExporter = registerExporter;
+crashlessFactory.telemetry = (config) => {
+  if (config) globalTelemetryConfig = { ...globalTelemetryConfig, ...config };
+  return globalTelemetryConfig;
+};
+crashlessFactory.getDashboardHTML = (opts) => {
+  return getDashboardHTML(opts?.route || '/_crashless', opts?.maskMessages || false, opts?.appName || 'Crashless API');
+};
 
-// Attach helper methods to factory function for convenience API
-defaultCrashless.createError = createError;
-defaultCrashless.registerExporter = registerExporter;
-defaultCrashless.handleAsync = handleAsync;
-
-export default defaultCrashless;
-export { crashlessFactory, createError, handleAsync, registerExporter };
+export default crashlessFactory;
+export { createError, registerExporter };
