@@ -1,7 +1,8 @@
 # ⚡ Crashless
 
 > **Zero-dependency middleware that prevents Express servers from crashing on errors**  
-> No try/catch. No `next(err)`. No crashes. Just stability.
+> Now with **built-in observability** — metrics, dashboard, and monitoring from a single line of code!  
+> No try/catch. No `next(err)`. No crashes. Just stability. Plus full observability.
 
 [![npm version](https://img.shields.io/npm/v/crashless)](https://www.npmjs.com/package/crashless)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -11,6 +12,18 @@
 ## 🎯 What is Crashless?
 
 **Crashless** is a lightweight middleware that automatically catches **all errors** in your Express app—whether they're async rejections, thrown errors, or promise failures. Your server will never crash from unhandled errors again.
+
+### 🆕 v0.3.0: Built-in Observability
+
+Crashless now includes a **complete observability system** built right in! Drop in the middleware and instantly get:
+
+- 📊 **Real-time Dashboard** — Visual monitoring panel at `/crashless` showing request rates, error rates, latency distributions, and more
+- 📈 **In-memory Metrics Engine** — Prometheus-like metrics with counters, histograms, and rolling time windows
+- 🎯 **Request Tracking** — Automatic collection of method, route, latency, status codes, and timestamps
+- 📡 **Export Formats** — Prometheus and OpenTelemetry export endpoints for integration with Grafana, Jaeger, and more
+- 🔍 **Error Intelligence** — Track errors by code, view recent errors, and monitor trends over time
+
+All of this works **zero-dependency** — the dashboard uses CDN resources, and metrics are stored in-memory. Perfect for startups who need observability without infrastructure, and perfect for teams who want to feed data into existing monitoring systems.
 
 ### The Problem It Solves
 
@@ -51,8 +64,17 @@ const app = express();
 // Enable async error handling (optional but recommended)
 crashless.handleAsync(app);
 
-// Add error middleware (MUST be last)
-app.use(crashless());
+// Initialize Crashless middleware
+const crashlessMiddleware = crashless({
+  enableMetrics: true,    // Enable metrics collection
+  enableDashboard: true,  // Enable dashboard at /crashless
+});
+
+// Mount request tracking (tracks all requests for metrics)
+app.use(crashlessMiddleware.requestTracker);
+
+// Mount dashboard and metrics routes
+crashlessMiddleware.mountRoutes(app);
 
 // Your routes - no try/catch needed!
 app.get('/users/:id', async (req, res) => {
@@ -60,10 +82,17 @@ app.get('/users/:id', async (req, res) => {
   res.json(user);
 });
 
+// Add error middleware (MUST be last)
+app.use(crashlessMiddleware);
+
 app.listen(3000);
 ```
 
-That's it! Your app is now crashless. 🎉
+That's it! Your app is now crashless **and observable**. 🎉
+
+- Visit `http://localhost:3000/crashless` for the dashboard
+- Visit `http://localhost:3000/metrics.json` for JSON metrics
+- Visit `http://localhost:3000/metrics/prometheus` for Prometheus format
 
 ### Try It Online
 
@@ -275,6 +304,46 @@ app.use(crashless());
 
 ---
 
+### 10. 📊 Built-in Observability & Dashboard (v0.3.0)
+
+**What it does:** Complete observability system with real-time dashboard, metrics engine, and export formats—all built-in, zero-dependency.
+
+**How to use:**
+```js
+const crashlessMiddleware = crashless({
+  enableMetrics: true,
+  enableDashboard: true,
+  dashboardPath: '/crashless',      // Optional: customize path
+  metricsPath: '/metrics.json',     // Optional: customize path
+});
+
+// Mount request tracking (before routes)
+app.use(crashlessMiddleware.requestTracker);
+
+// Mount dashboard and metrics routes
+crashlessMiddleware.mountRoutes(app);
+
+// Mount error handler (after routes)
+app.use(crashlessMiddleware);
+```
+
+**Dashboard features:**
+- 📈 Real-time request rate charts
+- 🚨 Error rate monitoring
+- ⏱️ Latency distribution (p50, p95, p99) by route
+- 📋 Route statistics with status code breakdowns
+- 🔍 Recent errors with full context
+- ⏰ Uptime tracking
+
+**Metrics endpoints:**
+- `/metrics.json` — JSON format with full metrics
+- `/metrics/prometheus` — Prometheus export format
+- `/metrics/otel` — OpenTelemetry export format
+
+**Why it's useful:** Get instant visibility into your API's health, performance, and errors—without setting up external monitoring tools. Perfect for development, and can feed into production monitoring systems like Grafana.
+
+---
+
 ## 📖 Detailed Usage
 
 ### Basic Error Handling
@@ -381,6 +450,10 @@ app.use(crashless({
 | `log` | `boolean` | `true` | Enable console error logging |
 | `defaultStatus` | `number` | `500` | Default HTTP status code for errors without status |
 | `onTelemetry` | `function` | `undefined` | Callback function for telemetry (err, meta) => void |
+| `enableMetrics` | `boolean` | `true` | Enable metrics collection and tracking |
+| `enableDashboard` | `boolean` | `true` | Enable dashboard route (requires `enableMetrics: true`) |
+| `dashboardPath` | `string` | `'/crashless'` | Path for the dashboard route |
+| `metricsPath` | `string` | `'/metrics.json'` | Base path for metrics endpoints |
 
 **Note:** Stack traces are automatically hidden in production (`NODE_ENV=production`).
 
@@ -422,6 +495,43 @@ Registers a global telemetry exporter.
 crashless.registerExporter('my-exporter', (err, meta) => {
   // Handle error
 });
+```
+
+### `crashless.requestTracker`
+
+Request tracking middleware to mount before your routes (v0.3.0).
+
+```js
+const crashlessMiddleware = crashless({ enableMetrics: true });
+app.use(crashlessMiddleware.requestTracker);
+```
+
+### `crashless.mountRoutes(app)`
+
+Mounts dashboard and metrics routes on the Express app (v0.3.0).
+
+```js
+crashlessMiddleware.mountRoutes(app);
+// Creates routes at:
+// - /crashless (dashboard)
+// - /metrics.json (JSON metrics)
+// - /metrics/prometheus (Prometheus format)
+// - /metrics/otel (OpenTelemetry format)
+```
+
+### Metrics Utilities (v0.3.0)
+
+```js
+import { getMetrics, exportPrometheus, exportOpenTelemetry } from 'crashless';
+
+// Get current metrics as JSON
+const metrics = getMetrics();
+
+// Export in Prometheus format
+const prometheusText = exportPrometheus();
+
+// Export in OpenTelemetry format
+const otelData = exportOpenTelemetry();
 ```
 
 ---
@@ -518,6 +628,57 @@ app.get('/protected', async (req, res) => {
   
   res.json({ user });
 });
+```
+
+### Example 4: With Observability Dashboard (v0.3.0)
+
+```js
+import express from 'express';
+import crashless from 'crashless';
+
+const app = express();
+crashless.handleAsync(app);
+
+// Initialize with observability enabled
+const crashlessMiddleware = crashless({
+  enableMetrics: true,
+  enableDashboard: true,
+  dashboardPath: '/crashless',
+  metricsPath: '/metrics.json',
+});
+
+// Mount request tracking (before routes)
+app.use(crashlessMiddleware.requestTracker);
+
+// Mount dashboard and metrics routes
+crashlessMiddleware.mountRoutes(app);
+
+// Your routes
+app.get('/users/:id', async (req, res) => {
+  const user = await db.getUser(req.params.id);
+  res.json(user);
+});
+
+// Mount error handler (after routes)
+app.use(crashlessMiddleware);
+
+app.listen(3000);
+// Visit http://localhost:3000/crashless to see the dashboard!
+```
+
+### Example 5: Integration with Prometheus/Grafana
+
+```js
+// Crashless exports metrics in Prometheus format
+// Scrape from: http://your-server/metrics/prometheus
+
+// In Prometheus config (prometheus.yml):
+// scrape_configs:
+//   - job_name: 'crashless'
+//     scrape_interval: 15s
+//     static_configs:
+//       - targets: ['localhost:3000']
+//     metrics_path: '/metrics/prometheus'
 ```
 
 ---

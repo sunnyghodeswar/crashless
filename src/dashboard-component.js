@@ -9,6 +9,8 @@ export function getDashboardComponent(maskMessages) {
       return {
         currentView: viewType,
         darkMode: false,
+        autoRefresh: true,
+        refreshInterval: 10,
         stats: { totalRequests: 0, totalErrors: 0, avgLatency: 0, errorRate: 0, uptime: '0s', requestsPerSecond: 0 },
         deltas: { requests: 0, errors: 0 },
         latencyPercentiles: { p50: 0, p95: 0, p99: 0 },
@@ -33,22 +35,72 @@ export function getDashboardComponent(maskMessages) {
           latencyChange: 0,
           messages: []
         },
+        // Traces dashboard state
+        traces: [],
+        selectedTraceIdx: null,
+        selectedTrace: null,
+        selectedSpan: null,
 
         async init() {
           console.log('[Dashboard] Initializing...');
           this.loadTheme();
+          this.loadAutoRefreshSettings();
           await this.waitForECharts();
           console.log('[Dashboard] ECharts loaded');
           await this.$nextTick();
           setTimeout(() => {
             this.setupCharts();
             this.fetchMetrics();
+            this.fetchTraces();
+            this.startAutoRefresh();
+          }, 100);
+        },
+
+        loadAutoRefreshSettings() {
+          const savedAutoRefresh = localStorage.getItem('crashlessAutoRefresh');
+          const savedInterval = localStorage.getItem('crashlessRefreshInterval');
+          if (savedAutoRefresh !== null) {
+            this.autoRefresh = savedAutoRefresh === 'true';
+          }
+          if (savedInterval !== null) {
+            this.refreshInterval = parseInt(savedInterval, 10) || 10;
+          }
+        },
+
+        startAutoRefresh() {
+          if (this.poller) {
+            clearInterval(this.poller);
+          }
+          if (this.autoRefresh) {
+            const intervalMs = this.refreshInterval * 1000;
             this.poller = setInterval(() => {
               console.log('[Dashboard] Auto-refresh triggered');
               this.fetchMetrics();
-            }, 3000);
-            console.log('[Dashboard] Auto-refresh started (every 3s)');
-          }, 100);
+              if (this.currentView === 'traces') {
+                this.fetchTraces();
+              }
+            }, intervalMs);
+            console.log('[Dashboard] Auto-refresh started (every ' + this.refreshInterval + 's)');
+          }
+        },
+
+        toggleAutoRefresh() {
+          this.autoRefresh = !this.autoRefresh;
+          localStorage.setItem('crashlessAutoRefresh', this.autoRefresh.toString());
+          this.startAutoRefresh();
+        },
+
+        updateRefreshInterval() {
+          localStorage.setItem('crashlessRefreshInterval', this.refreshInterval.toString());
+          this.startAutoRefresh();
+        },
+
+        switchDashboard(view) {
+          this.currentView = view;
+          // Fetch traces when switching to traces view
+          if (view === 'traces') {
+            this.fetchTraces();
+          }
         },
 
         waitForECharts() {
@@ -469,7 +521,7 @@ export function getDashboardComponent(maskMessages) {
                 }
               },
               legend: { data: ['Requests/min', 'Errors/min'], textStyle: { color: theme.text }, top: 10 },
-              grid: { left: '3%', right: '4%', bottom: '10%', top: '15%', containLabel: true },
+              grid: { left: '10%', right: '8%', bottom: '12%', top: '18%', containLabel: true },
               xAxis: {
                 type: 'category',
                 data: this.timeSeries.labels.length ? this.timeSeries.labels : ['Loading...'],
@@ -508,11 +560,11 @@ export function getDashboardComponent(maskMessages) {
                 textStyle: { color: theme.text },
                 formatter: '{b}<br>Error Rate: {c}%'
               },
-              grid: { left: '3%', right: '4%', bottom: '10%', top: '10%', containLabel: true },
+              grid: { left: '10%', right: '8%', bottom: '12%', top: '15%', containLabel: true },
               xAxis: {
                 type: 'category',
                 data: this.timeSeries.labels.length ? this.timeSeries.labels : ['Loading...'],
-                axisLabel: { color: theme.text },
+                axisLabel: { color: theme.text, rotate: 0 },
                 axisLine: { lineStyle: { color: theme.subText } },
               },
               yAxis: {
@@ -547,11 +599,11 @@ export function getDashboardComponent(maskMessages) {
                 textStyle: { color: theme.text },
                 formatter: '{b}<br>Avg Latency: {c} ms'
               },
-              grid: { left: '3%', right: '4%', bottom: '10%', top: '10%', containLabel: true },
+              grid: { left: '10%', right: '8%', bottom: '12%', top: '15%', containLabel: true },
               xAxis: {
                 type: 'category',
                 data: this.timeSeries.labels.length ? this.timeSeries.labels : ['Loading...'],
-                axisLabel: { color: theme.text },
+                axisLabel: { color: theme.text, rotate: 0 },
                 axisLine: { lineStyle: { color: theme.subText } },
               },
               yAxis: {
@@ -599,7 +651,7 @@ export function getDashboardComponent(maskMessages) {
                 }
               },
               legend: { data: Object.keys(this.timeSeries.errorCodes).slice(0, 5), textStyle: { color: theme.text }, top: 10 },
-              grid: { left: '3%', right: '4%', bottom: '10%', top: '15%', containLabel: true },
+              grid: { left: '10%', right: '8%', bottom: '12%', top: '18%', containLabel: true },
               xAxis: {
                 type: 'category',
                 data: this.timeSeries.labels.length ? this.timeSeries.labels.slice(-Math.max(...Object.values(this.timeSeries.errorCodes).map(d => d.length))) : ['No data'],
@@ -646,7 +698,7 @@ export function getDashboardComponent(maskMessages) {
                   return p.axisValue + '<br>' + p.marker + ' Count: ' + p.value;
                 }
               },
-              grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
+              grid: { left: '10%', right: '8%', bottom: '18%', top: '15%', containLabel: true },
               xAxis: {
                 type: 'category',
                 data: combinedData.length ? combinedData.map(d => d.name) : ['No data'],
@@ -812,7 +864,7 @@ export function getDashboardComponent(maskMessages) {
               }
             },
             legend: { data: ['p50', 'p95', 'p99'], textStyle: { color: theme.text }, top: 10 },
-            grid: { left: '3%', right: '4%', bottom: '20%', top: '15%', containLabel: true },
+            grid: { left: '12%', right: '8%', bottom: '20%', top: '18%', containLabel: true },
             xAxis: {
               type: 'category',
               data: latencyRoutes.length ? latencyRoutes.map(r => r.key.substring(0, 30)) : ['No routes'],
@@ -845,7 +897,7 @@ export function getDashboardComponent(maskMessages) {
                 borderColor: this.darkMode ? '#374151' : '#E5E7EB',
                 textStyle: { color: theme.text }
               },
-              grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
+              grid: { left: '10%', right: '8%', bottom: '18%', top: '15%', containLabel: true },
               xAxis: {
                 type: 'category',
                 data: errorFreqData.map(d => d.name),
@@ -905,7 +957,7 @@ export function getDashboardComponent(maskMessages) {
                 borderColor: this.darkMode ? '#374151' : '#E5E7EB',
                 textStyle: { color: theme.text }
               },
-              grid: { left: '3%', right: '4%', bottom: '20%', top: '10%', containLabel: true },
+              grid: { left: '10%', right: '8%', bottom: '22%', top: '15%', containLabel: true },
               xAxis: {
                 type: 'category',
                 data: failingRoutes.map(r => r.key.substring(0, 25)),
@@ -944,7 +996,7 @@ export function getDashboardComponent(maskMessages) {
                 borderColor: this.darkMode ? '#374151' : '#E5E7EB',
                 textStyle: { color: theme.text }
               },
-              grid: { left: '3%', right: '4%', bottom: '10%', top: '10%', containLabel: true },
+              grid: { left: '10%', right: '8%', bottom: '12%', top: '15%', containLabel: true },
               xAxis: {
                 type: 'category',
                 data: latencyBins.map((_, i) => (i * 50) + '-' + ((i + 1) * 50) + 'ms'),
@@ -1031,7 +1083,7 @@ export function getDashboardComponent(maskMessages) {
                 textStyle: { color: theme.text }
               },
               legend: { data: ['Requests/min', 'Avg Latency'], textStyle: { color: theme.text }, top: 10 },
-              grid: { left: '3%', right: '4%', bottom: '10%', top: '15%', containLabel: true },
+              grid: { left: '10%', right: '8%', bottom: '12%', top: '18%', containLabel: true },
               xAxis: {
                 type: 'category',
                 data: this.timeSeries.labels.length ? this.timeSeries.labels : ['Loading...'],
@@ -1063,6 +1115,130 @@ export function getDashboardComponent(maskMessages) {
         refresh() {
           console.log('[Dashboard] Manual refresh triggered');
           this.fetchMetrics();
+          if (this.currentView === 'traces') {
+            this.fetchTraces();
+          }
+        },
+
+        async fetchTraces() {
+          try {
+            const res = await fetch('/traces.json?limit=100');
+            if (!res.ok) throw new Error('Request failed: ' + res.status);
+            const data = await res.json();
+            console.log('[Dashboard] Received traces:', data);
+            // Filter out internal observability endpoints
+            let traces = (data.traces || []).filter(trace => {
+              const route = this.getTraceRoute(trace);
+              return !this.isInternalEndpoint(route);
+            });
+            this.traces = traces;
+            // If we had a selected trace, try to find it again
+            if (this.selectedTraceIdx !== null && this.traces[this.selectedTraceIdx]) {
+              this.selectedTrace = this.traces[this.selectedTraceIdx];
+            } else if (this.selectedTraceIdx !== null) {
+              this.selectedTrace = null;
+              this.selectedTraceIdx = null;
+              this.selectedSpan = null;
+            }
+          } catch (err) {
+            console.error('[Dashboard] Fetch traces error:', err);
+          }
+        },
+
+        isInternalEndpoint(route) {
+          if (!route) return true;
+          const internalPatterns = [
+            '/metrics.json',
+            '/traces.json',
+            '/metrics',
+            '/metrics/otel',
+            '/_crashless',
+            '/health',
+            '/favicon.ico',
+          ];
+          return internalPatterns.some(pattern => route.includes(pattern) || route === pattern);
+        },
+
+        selectTrace(idx) {
+          this.selectedTraceIdx = idx;
+          this.selectedTrace = this.traces[idx] || null;
+          this.selectedSpan = null; // Reset span selection
+        },
+
+        selectSpan(span) {
+          this.selectedSpan = span;
+        },
+
+        getTraceRoute(trace) {
+          if (!trace || !trace.spans || trace.spans.length === 0) return 'Unknown';
+          // Find root span (no parent or null/empty parentSpanId)
+          const rootSpan = trace.spans.find(s => !s.parentSpanId || s.parentSpanId === null || s.parentSpanId === '') || trace.spans[0];
+          if (!rootSpan) return 'Unknown';
+          // Prefer http.route or http.path from attributes, fallback to name
+          return rootSpan.attributes?.['http.route'] || 
+                 rootSpan.attributes?.['http.path'] || 
+                 rootSpan.attributes?.['http.target'] ||
+                 rootSpan.name || 
+                 'Unknown';
+        },
+
+        hasTraceError(trace) {
+          if (!trace || !trace.spans) return false;
+          return trace.spans.some(s => s.status === 'error' || s.error);
+        },
+
+        buildSpanTree(spans) {
+          if (!spans || spans.length === 0) return [];
+          
+          // Create a map of spans by spanId for quick lookup
+          const spanMap = new Map();
+          spans.forEach(span => {
+            spanMap.set(span.spanId, { ...span, depth: 0, children: [] });
+          });
+
+          // Build tree structure
+          const rootSpans = [];
+          spanMap.forEach((span, spanId) => {
+            if (!span.parentSpanId) {
+              // Root span
+              span.depth = 0;
+              rootSpans.push(span);
+            } else {
+              // Child span - find parent and add as child
+              const parent = spanMap.get(span.parentSpanId);
+              if (parent) {
+                span.depth = (parent.depth || 0) + 1;
+                if (!parent.children) parent.children = [];
+                parent.children.push(span);
+              } else {
+                // Orphan span (parent not found) - treat as root with depth 0
+                span.depth = 0;
+                rootSpans.push(span);
+              }
+            }
+          });
+
+          // Flatten tree in depth-first order for display
+          const flatten = (span, depth = 0) => {
+            const result = [{ ...span, depth }];
+            if (span.children && span.children.length > 0) {
+              span.children.forEach(child => {
+                result.push(...flatten(child, depth + 1));
+              });
+            }
+            return result;
+          };
+
+          const result = [];
+          rootSpans.forEach(root => {
+            result.push(...flatten(root));
+          });
+
+          // Sort by start time within same depth to maintain chronological order
+          return result.sort((a, b) => {
+            if (a.depth !== b.depth) return a.depth - b.depth;
+            return (a.startTime || 0) - (b.startTime || 0);
+          });
         },
 
         formatUptime(ms) {

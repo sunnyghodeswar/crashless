@@ -6,8 +6,9 @@
 // Helper to get dashboard view type from URL
 export function getDashboardView(path) {
   if (path.includes('/system') || path.endsWith('/system')) return 'system';
-  if (path.includes('/crashes') || path.includes('/errors')) return 'crashes';
-  if (path.includes('/performance') || path.endsWith('/performance')) return 'performance';
+  if (path.includes('/crashes') || path.includes('/errors')) return 'errors';
+  if (path.includes('/traces') || path.endsWith('/traces')) return 'traces';
+  if (path.includes('/performance') || path.endsWith('/performance')) return 'system'; // Performance merged into system
   return 'system'; // Default to system overview
 }
 
