@@ -3,6 +3,7 @@ import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import {useColorMode} from '@docusaurus/theme-common';
 import clsx from 'clsx';
 import styles from './index.module.css';
 
@@ -162,6 +163,11 @@ function DocCard({title, description, to, badge}) {
 export default function Home() {
   const {siteConfig} = useDocusaurusContext();
   const heroImageUrl = useBaseUrl('img/banner.png');
+  const {colorMode} = useColorMode();
+  const stackblitzTheme = colorMode === 'dark' ? 'dark' : 'light';
+  const stackblitzUrl =
+    'https://stackblitz.com/github/sunnyghodeswar/crashless-examples?file=examples%2Fexample-one-liner.js&embed=1&hideExplorer=1&hideNavigation=1&view=preview';
+  const stackblitzSrc = `${stackblitzUrl}&theme=${stackblitzTheme}`;
 
   return (
     <Layout
@@ -248,6 +254,29 @@ export default function Home() {
             {docsSpotlight.map(doc => (
               <DocCard key={doc.title} {...doc} />
             ))}
+          </div>
+        </section>
+
+        <section className={styles.playgroundSection}>
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionBadge}>Try it live</span>
+            <h2>Experiment with Crashless in your browser</h2>
+            <p>Spin up the StackBlitz demo to explore middleware guards, dashboards, and tracing without leaving the docs.</p>
+          </div>
+          <div className={styles.playgroundFrameWrapper}>
+            <iframe
+              src={stackblitzSrc}
+              title="Crashless StackBlitz Demo"
+              loading="lazy"
+              allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+              allowFullScreen
+            />
+          </div>
+          <div className={styles.playgroundFooter}>
+            <span>Prefer a full tab?</span>
+            <Link to={stackblitzUrl} className="button button--link">
+              Open StackBlitz demo →
+            </Link>
           </div>
         </section>
 
