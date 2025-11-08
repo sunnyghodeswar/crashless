@@ -60,6 +60,8 @@ docs-site/.jekyll-cache/
 docs-site/.docusaurus/
 docs-site/build/
 docs-site/node_modules/
+# Keep static assets (images, etc.)
+!docs-site/static/
 
 # Temporary files
 *.tmp

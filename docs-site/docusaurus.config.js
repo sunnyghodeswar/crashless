@@ -8,7 +8,7 @@ const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 const config = {
   title: 'Crashless',
   tagline: 'Production-ready observability for Node.js',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.svg',
 
   // Set the production url of your site here
   url: 'https://sunnyghodeswar.github.io',
@@ -62,7 +62,8 @@ const config = {
         title: 'Crashless',
         logo: {
           alt: 'Crashless Logo',
-          src: 'img/logo.svg',
+          src: 'img/logo.png',
+          srcDark: 'img/logo-dark.png',
         },
         items: [
           {
