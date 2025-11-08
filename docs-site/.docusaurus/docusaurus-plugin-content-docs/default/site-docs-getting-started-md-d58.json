@@ -1,0 +1,24 @@
+{
+  "id": "getting-started",
+  "title": "Getting Started",
+  "description": "This guide will help you get started with Crashless in minutes.",
+  "source": "@site/docs/getting-started.md",
+  "sourceDirName": ".",
+  "slug": "/getting-started",
+  "permalink": "/crashless/docs/getting-started",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/sunnyghodeswar/crashless/tree/main/docs-site/docs/getting-started.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Crashless Documentation",
+    "permalink": "/crashless/docs/"
+  },
+  "next": {
+    "title": "Configuration Guide",
+    "permalink": "/crashless/docs/configuration"
+  }
+}

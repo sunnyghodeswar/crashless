@@ -13,14 +13,14 @@ Crashless is a zero-dependency Express middleware that provides:
 
 ## Quick Navigation
 
-- [Getting Started](getting-started.md) - Installation and basic setup
-- [API Reference](api-reference.md) - Complete API documentation
-- [Configuration](configuration.md) - All configuration options
-- [Performance](performance.md) - Benchmarks and optimization
-- [Examples](examples.md) - Code examples for common scenarios
-- [Security](security.md) - Security best practices
-- [Architecture](architecture.md) - How Crashless works internally
-- [Limitations](limitations.md) - Honest trade-offs and limitations
+- [Getting Started](getting-started) - Installation and basic setup
+- [API Reference](api-reference) - Complete API documentation
+- [Configuration](configuration) - All configuration options
+- [Performance](performance) - Benchmarks and optimization
+- [Examples](examples) - Code examples for common scenarios
+- [Security](security) - Security best practices
+- [Architecture](architecture) - How Crashless works internally
+- [Limitations](limitations) - Honest trade-offs and limitations
 
 ---
 
@@ -117,16 +117,16 @@ Crashless is designed for performance:
 - **Full observability:** ~27% overhead (with 20% sampling)
 - **2.2x faster** than express-async-errors
 
-See [Performance Guide](performance.md) for detailed benchmarks and optimization strategies.
+See [Performance Guide](performance) for detailed benchmarks and optimization strategies.
 
 ---
 
 ## Next Steps
 
-- [Getting Started Guide](getting-started.md) - Step-by-step setup
-- [Configuration Options](configuration.md) - Customize Crashless
-- [Examples](examples.md) - Real-world usage patterns
-- [API Reference](api-reference.md) - Complete API documentation
+- [Getting Started Guide](getting-started) - Step-by-step setup
+- [Configuration Options](configuration) - Customize Crashless
+- [Examples](examples) - Real-world usage patterns
+- [API Reference](api-reference) - Complete API documentation
 
 ---
 

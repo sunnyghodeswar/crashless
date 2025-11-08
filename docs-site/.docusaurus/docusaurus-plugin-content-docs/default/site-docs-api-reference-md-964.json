@@ -1,0 +1,24 @@
+{
+  "id": "api-reference",
+  "title": "API Reference",
+  "description": "Complete API documentation for Crashless.",
+  "source": "@site/docs/api-reference.md",
+  "sourceDirName": ".",
+  "slug": "/api-reference",
+  "permalink": "/crashless/docs/api-reference",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/sunnyghodeswar/crashless/tree/main/docs-site/docs/api-reference.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Configuration Guide",
+    "permalink": "/crashless/docs/configuration"
+  },
+  "next": {
+    "title": "Examples",
+    "permalink": "/crashless/docs/examples"
+  }
+}

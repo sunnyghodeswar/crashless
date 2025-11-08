@@ -10,7 +10,7 @@ Main middleware function. Returns Express middleware.
 
 **`options`** (Object, optional) - Configuration options
 
-See [Configuration Guide](configuration.md) for all available options.
+See [Configuration Guide](/docs/configuration) for all available options.
 
 ### Returns
 
@@ -230,7 +230,7 @@ Export traces in JSON format.
 
 ## Configuration Options
 
-See [Configuration Guide](configuration.md) for complete documentation of all configuration options.
+See [Configuration Guide](/docs/configuration) for complete documentation of all configuration options.
 
 ---
 
@@ -257,7 +257,7 @@ app.use(crashless({
 
 ## Next Steps
 
-- [Configuration Guide](configuration.md) - All configuration options
-- [Examples](examples.md) - Real-world usage patterns
-- [Performance Guide](performance.md) - Optimization strategies
+- [Configuration Guide](/docs/configuration) - All configuration options
+- [Examples](/docs/examples) - Real-world usage patterns
+- [Performance Guide](/docs/performance) - Optimization strategies
 

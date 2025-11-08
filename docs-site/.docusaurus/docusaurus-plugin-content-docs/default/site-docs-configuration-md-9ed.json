@@ -1,0 +1,24 @@
+{
+  "id": "configuration",
+  "title": "Configuration Guide",
+  "description": "Complete guide to configuring Crashless for your needs.",
+  "source": "@site/docs/configuration.md",
+  "sourceDirName": ".",
+  "slug": "/configuration",
+  "permalink": "/crashless/docs/configuration",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/sunnyghodeswar/crashless/tree/main/docs-site/docs/configuration.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Getting Started",
+    "permalink": "/crashless/docs/getting-started"
+  },
+  "next": {
+    "title": "API Reference",
+    "permalink": "/crashless/docs/api-reference"
+  }
+}

@@ -278,7 +278,7 @@ Crashless respects these environment variables:
 
 ## Next Steps
 
-- [API Reference](api-reference.md) - Complete API documentation
-- [Examples](examples.md) - Configuration examples
-- [Performance Guide](performance.md) - Optimization strategies
+- [API Reference](/docs/api-reference) - Complete API documentation
+- [Examples](/docs/examples) - Configuration examples
+- [Performance Guide](/docs/performance) - Optimization strategies
 

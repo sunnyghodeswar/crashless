@@ -323,7 +323,7 @@ app.use(crashless({
 
 ## Next Steps
 
-- [Configuration Guide](configuration.md) - Optimize your setup
-- [Examples](examples.md) - Performance-focused examples
-- [API Reference](api-reference.md) - Complete API docs
+- [Configuration Guide](/docs/configuration) - Optimize your setup
+- [Examples](/docs/examples) - Performance-focused examples
+- [API Reference](/docs/api-reference) - Complete API docs
 

@@ -217,6 +217,6 @@ app.use(crashless({
 
 ## Next Steps
 
-- [Configuration Guide](configuration.md) - Security configuration options
-- [Examples](examples.md) - Security-focused examples
+- [Configuration Guide](/docs/configuration) - Security configuration options
+- [Examples](/docs/examples) - Security-focused examples
 

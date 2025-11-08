@@ -1,0 +1,24 @@
+{
+  "id": "examples",
+  "title": "Examples",
+  "description": "Real-world examples and patterns for using Crashless.",
+  "source": "@site/docs/examples.md",
+  "sourceDirName": ".",
+  "slug": "/examples",
+  "permalink": "/crashless/docs/examples",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/sunnyghodeswar/crashless/tree/main/docs-site/docs/examples.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "API Reference",
+    "permalink": "/crashless/docs/api-reference"
+  },
+  "next": {
+    "title": "Performance Guide",
+    "permalink": "/crashless/docs/performance"
+  }
+}

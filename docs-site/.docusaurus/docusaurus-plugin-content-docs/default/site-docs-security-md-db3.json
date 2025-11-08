@@ -1,0 +1,24 @@
+{
+  "id": "security",
+  "title": "Security Guide",
+  "description": "Security best practices for using Crashless in production.",
+  "source": "@site/docs/security.md",
+  "sourceDirName": ".",
+  "slug": "/security",
+  "permalink": "/crashless/docs/security",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/sunnyghodeswar/crashless/tree/main/docs-site/docs/security.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Performance Guide",
+    "permalink": "/crashless/docs/performance"
+  },
+  "next": {
+    "title": "Architecture",
+    "permalink": "/crashless/docs/architecture"
+  }
+}
