@@ -42,11 +42,9 @@ export function getDashboardComponent(maskMessages) {
         selectedSpan: null,
 
         async init() {
-          console.log('[Dashboard] Initializing...');
           this.loadTheme();
           this.loadAutoRefreshSettings();
           await this.waitForECharts();
-          console.log('[Dashboard] ECharts loaded');
           await this.$nextTick();
           setTimeout(() => {
             this.setupCharts();
@@ -74,13 +72,11 @@ export function getDashboardComponent(maskMessages) {
           if (this.autoRefresh) {
             const intervalMs = this.refreshInterval * 1000;
             this.poller = setInterval(() => {
-              console.log('[Dashboard] Auto-refresh triggered');
               this.fetchMetrics();
               if (this.currentView === 'traces') {
                 this.fetchTraces();
               }
             }, intervalMs);
-            console.log('[Dashboard] Auto-refresh started (every ' + this.refreshInterval + 's)');
           }
         },
 
@@ -125,11 +121,9 @@ export function getDashboardComponent(maskMessages) {
         },
 
         toggleTheme() {
-          console.log('[Dashboard] Toggle theme clicked, current:', this.darkMode);
           this.darkMode = !this.darkMode;
           this.applyTheme();
           localStorage.setItem('crashlessTheme', this.darkMode ? 'dark' : 'light');
-          console.log('[Dashboard] Theme changed to:', this.darkMode ? 'dark' : 'light');
           // Rebuild all charts with new theme
           setTimeout(() => {
             this.updateCharts();
@@ -149,9 +143,7 @@ export function getDashboardComponent(maskMessages) {
             const res = await fetch('/metrics.json');
             if (!res.ok) throw new Error('Request failed: ' + res.status);
             const data = await res.json();
-            console.log('[Dashboard] Received data:', data);
             this.hydrate(data);
-            console.log('[Dashboard] Metrics updated at', new Date().toLocaleTimeString());
           } catch (err) {
             console.error('[Dashboard] Fetch error:', err);
             // Show error in UI
@@ -428,11 +420,9 @@ export function getDashboardComponent(maskMessages) {
 
         setupCharts() {
           if (typeof echarts === 'undefined') {
-            console.warn('[Dashboard] ECharts not loaded');
             return;
           }
           
-          console.log('[Dashboard] Initializing charts...');
           const allChartIds = [
             'trendChart', 'errorRateChart', 'latencyTimeChart', 'errorTimelineChart',
             'errorBreakdownChart', 'statusPieChart', 'trafficHeatmapChart', 'latencyPerRouteChart',
@@ -449,16 +439,12 @@ export function getDashboardComponent(maskMessages) {
             const el = document.getElementById(id);
             if (el) {
               this.charts[id.replace('Chart', '')] = echarts.init(el, null, { renderer: 'canvas' });
-            } else {
-              console.warn('[Dashboard] Element not found:', id);
             }
           });
 
           window.addEventListener('resize', () => {
             Object.values(this.charts).forEach(chart => chart && chart.resize());
           });
-          
-          console.log('[Dashboard] Charts initialized:', Object.keys(this.charts));
         },
 
         getChartTheme() {
@@ -1113,7 +1099,6 @@ export function getDashboardComponent(maskMessages) {
         },
 
         refresh() {
-          console.log('[Dashboard] Manual refresh triggered');
           this.fetchMetrics();
           if (this.currentView === 'traces') {
             this.fetchTraces();
@@ -1125,7 +1110,6 @@ export function getDashboardComponent(maskMessages) {
             const res = await fetch('/traces.json?limit=100');
             if (!res.ok) throw new Error('Request failed: ' + res.status);
             const data = await res.json();
-            console.log('[Dashboard] Received traces:', data);
             // Filter out internal observability endpoints
             let traces = (data.traces || []).filter(trace => {
               const route = this.getTraceRoute(trace);

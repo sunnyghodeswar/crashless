@@ -1,769 +1,211 @@
 # ⚡ Crashless
 
-> **Zero-dependency middleware that prevents Express servers from crashing on errors**  
-> Now with **built-in observability** — metrics, dashboard, and monitoring from a single line of code!  
-> No try/catch. No `next(err)`. No crashes. Just stability. Plus full observability.
+> **Production-Ready Observability for Node.js**  
+> Zero npm-dependency middleware that prevents Express servers from crashing and provides built-in monitoring — all from a single line of code.
 
 [![npm version](https://img.shields.io/npm/v/crashless)](https://www.npmjs.com/package/crashless)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org)
 
 ---
 
-## 🎯 What is Crashless?
+## 📚 Documentation
 
-**Crashless** is a lightweight middleware that automatically catches **all errors** in your Express app—whether they're async rejections, thrown errors, or promise failures. Your server will never crash from unhandled errors again.
+**[📖 Complete Documentation](https://sunnyghodeswar.github.io/crashless/)**
 
-### 🆕 v0.3.0: Built-in Observability
+**Quick Links:**
 
-Crashless now includes a **complete observability system** built right in! Drop in the middleware and instantly get:
+- [Getting Started](https://sunnyghodeswar.github.io/crashless/getting-started) - Installation & first steps
+- [Configuration Guide](https://sunnyghodeswar.github.io/crashless/configuration) - All configuration options
+- [API Reference](https://sunnyghodeswar.github.io/crashless/api-reference) - Complete API docs
+- [Performance Guide](https://sunnyghodeswar.github.io/crashless/performance) - Optimization tips
+- [Examples](https://sunnyghodeswar.github.io/crashless/examples) - Common use cases
 
-- 📊 **Real-time Dashboard** — Visual monitoring panel at `/crashless` showing request rates, error rates, latency distributions, and more
-- 📈 **In-memory Metrics Engine** — Prometheus-like metrics with counters, histograms, and rolling time windows
-- 🎯 **Request Tracking** — Automatic collection of method, route, latency, status codes, and timestamps
-- 📡 **Export Formats** — Prometheus and OpenTelemetry export endpoints for integration with Grafana, Jaeger, and more
-- 🔍 **Error Intelligence** — Track errors by code, view recent errors, and monitor trends over time
+---
 
-All of this works **zero-dependency** — the dashboard uses CDN resources, and metrics are stored in-memory. Perfect for startups who need observability without infrastructure, and perfect for teams who want to feed data into existing monitoring systems.
+## ✨ Features
 
-### The Problem It Solves
-
-❌ **Without Crashless:**
-```js
-app.get('/users/:id', async (req, res) => {
-  const user = await db.getUser(req.params.id); // 💥 CRASHES if this fails!
-  res.json(user);
-});
-```
-
-✅ **With Crashless:**
-```js
-app.get('/users/:id', async (req, res) => {
-  const user = await db.getUser(req.params.id); // 🛡️ Safely caught!
-  res.json(user);
-});
-```
+| Category | Features |
+|----------|----------|
+| **Error Handling** | Automatic async + sync error catching, no try-catch needed |
+| **Observability** | Built-in dashboard, Prometheus metrics, distributed tracing |
+| **Performance** | Minimal overhead (~3%), faster than express-async-errors |
+| **Security** | Production-safe by default, IP whitelist + token auth |
+| **Integration** | Zero dependencies, plug & play with any Express app |
 
 ---
 
 ## 🚀 Quick Start
 
-### Installation
-
 ```bash
 npm install crashless
 ```
 
-### Basic Setup
-
-```js
+```javascript
 import express from 'express';
 import crashless from 'crashless';
 
 const app = express();
+app.use(crashless()); // 🎉 That's it!
 
-// Enable async error handling (optional but recommended)
-crashless.handleAsync(app);
-
-// Initialize Crashless middleware
-const crashlessMiddleware = crashless({
-  enableMetrics: true,    // Enable metrics collection
-  enableDashboard: true,  // Enable dashboard at /crashless
-});
-
-// Mount request tracking (tracks all requests for metrics)
-app.use(crashlessMiddleware.requestTracker);
-
-// Mount dashboard and metrics routes
-crashlessMiddleware.mountRoutes(app);
-
-// Your routes - no try/catch needed!
 app.get('/users/:id', async (req, res) => {
-  const user = await db.getUser(req.params.id);
+  const user = await db.getUser(req.params.id); // 🛡️ Errors safely caught
   res.json(user);
 });
-
-// Add error middleware (MUST be last)
-app.use(crashlessMiddleware);
 
 app.listen(3000);
 ```
 
-That's it! Your app is now crashless **and observable**. 🎉
-
-- Visit `http://localhost:3000/crashless` for the dashboard
-- Visit `http://localhost:3000/metrics.json` for JSON metrics
-- Visit `http://localhost:3000/metrics/prometheus` for Prometheus format
-
-### Try It Online
-
-🚀 **[Try on StackBlitz](https://stackblitz.com/github/sunnyghodeswar/node-express-crashless?file=server.js)**  
-💻 **[Try on CodeSandbox](https://codesandbox.io/p/github/sunnyghodeswar/node-express-crashless?file=server.js)**  
-📚 **[View Full Examples Repository](https://github.com/sunnyghodeswar/node-express-crashless)** - Complete examples showcasing all features
+**🖥️ Dashboard:** [http://localhost:3000/_crashless](http://localhost:3000/_crashless)
 
 ---
 
+## 💡 Why Crashless?
 
-## ✨ Features
+### The Problem
 
-### 1. 🧠 Automatic Async Error Handling
-
-**What it does:** Automatically catches errors in async/await routes without try/catch blocks.
-
-**How it works:** Call `crashless.handleAsync(app)` once at startup. It wraps all async route handlers to catch any errors.
-
-```js
-crashless.handleAsync(app);
-
-app.get('/data', async (req, res) => {
-  // If this throws an error, Crashless catches it automatically!
-  const data = await fetchDataFromAPI();
-  res.json(data);
-});
-```
-
-**Why it's useful:** You can write clean async code without wrapping everything in try/catch blocks.
-
----
-
-### 2. 🪄 One-Liner Setup
-
-**What it does:** Just add `app.use(crashless())` and you're done.
-
-**Simple setup:**
-```js
-app.use(crashless()); // That's it!
-```
-
-**With options:**
-```js
-app.use(crashless({
-  log: true,
-  maskMessages: true
-}));
-```
-
-**Why it's useful:** Minimal setup, maximum protection.
-
----
-
-### 3. 🧰 Standardized Error Creation
-
-**What it does:** Provides `createError()` helper to create consistent error objects with status codes and error codes.
-
-**How to use:**
-```js
-throw crashless.createError(
-  'User not found',    // Message
-  404,                 // HTTP status code
-  'USER_NOT_FOUND',    // Error code
-  { userId: 123 }      // Optional details
-);
-```
-
-**Response format:**
-```json
-{
-  "success": false,
-  "message": "User not found",
-  "code": "USER_NOT_FOUND"
-}
-```
-
-**Why it's useful:** Consistent error format across your entire API, making it easier for clients to handle errors.
-
----
-
-### 4. 🔒 Production-Safe Error Messages
-
-**What it does:** Automatically masks sensitive error messages in production to prevent information leaks.
-
-**Development mode:**
-```json
-{
-  "success": false,
-  "message": "Database connection failed: postgres://user:password@localhost/db",
-  "code": "DB_ERROR",
-  "stack": "Error: Database connection failed\n    at..."
-}
-```
-
-**Production mode:**
-```json
-{
-  "success": false,
-  "message": "Internal server error",
-  "code": "DB_ERROR"
-}
-```
-
-**Why it's useful:** Prevents exposing sensitive information (passwords, file paths, stack traces) to potential attackers.
-
----
-
-### 5. 📜 Smart Stack Trace Exposure
-
-**What it does:** Shows stack traces in development for debugging, hides them in production for security.
-
-**Development:** Full stack traces visible  
-**Production:** Stack traces hidden
-
-**Why it's useful:** Helps you debug during development while keeping production secure.
-
----
-
-### 6. 🪶 Intelligent Logging
-
-**What it does:** Automatically logs errors with request metadata (method, path, timestamp, user-agent, etc.).
-
-**Log output:**
-```
-[Crashless] Error: {
-  name: 'Error',
-  message: 'User not found',
-  code: 'USER_NOT_FOUND',
-  status: 404
-} {
-  stack: 'Error: User not found\n    at...'
-} {
-  method: 'GET',
-  path: '/users/123',
-  status: 404,
-  timestamp: '2024-01-15T10:30:00.000Z',
-  userAgent: 'Mozilla/5.0...'
-}
-```
-
-**Why it's useful:** All the context you need to debug issues, automatically included.
-
----
-
-### 7. 📡 Built-in Telemetry Hooks
-
-**What it does:** Provides hooks to send errors to monitoring services like Sentry, Prometheus, or custom systems.
-
-**Using `onTelemetry` callback:**
-```js
-app.use(crashless({
-  onTelemetry: (err, meta) => {
-    // Send to Sentry
-    Sentry.captureException(err, {
-      tags: { path: meta.path, method: meta.method }
-    });
-    
-    // Or send to Prometheus
-    errorCounter.inc({ code: err.code, status: meta.status });
-  }
-}));
-```
-
-**Using `registerExporter`:**
-```js
-// Register once, use everywhere
-crashless.registerExporter('sentry', (err, meta) => {
-  Sentry.captureException(err);
-});
-
-crashless.registerExporter('metrics', (err, meta) => {
-  trackError(meta.path, meta.status);
-});
-```
-
-**Why it's useful:** Integrate with your existing monitoring infrastructure without changing your code.
-
----
-
-### 8. 🧩 Works Seamlessly with Express & Vegaa
-
-**What it does:** Same simple API works with both Express and Vegaa frameworks.
-
-**Express:**
-```js
-import express from 'express';
-const app = express();
-crashless.handleAsync(app);
-app.use(crashless());
-```
-
-**Vegaa:**
-```js
-import Vegaa from 'vegaa';
-const app = new Vegaa();
-crashless.handleAsync(app);
-app.use(crashless());
-```
-
-**Why it's useful:** Same code, same reliability, works with both frameworks.
-
----
-
-### 9. 🚀 Minimal Performance Overhead
-
-**What it does:** Designed for <1% performance overhead. Zero dependencies.
-
-**Why it's useful:** Production-ready performance without sacrificing speed.
-
----
-
-### 10. 📊 Built-in Observability & Dashboard (v0.3.0)
-
-**What it does:** Complete observability system with real-time dashboard, metrics engine, and export formats—all built-in, zero-dependency.
-
-**How to use:**
-```js
-const crashlessMiddleware = crashless({
-  enableMetrics: true,
-  enableDashboard: true,
-  dashboardPath: '/crashless',      // Optional: customize path
-  metricsPath: '/metrics.json',     // Optional: customize path
-});
-
-// Mount request tracking (before routes)
-app.use(crashlessMiddleware.requestTracker);
-
-// Mount dashboard and metrics routes
-crashlessMiddleware.mountRoutes(app);
-
-// Mount error handler (after routes)
-app.use(crashlessMiddleware);
-```
-
-**Dashboard features:**
-- 📈 Real-time request rate charts
-- 🚨 Error rate monitoring
-- ⏱️ Latency distribution (p50, p95, p99) by route
-- 📋 Route statistics with status code breakdowns
-- 🔍 Recent errors with full context
-- ⏰ Uptime tracking
-
-**Metrics endpoints:**
-- `/metrics.json` — JSON format with full metrics
-- `/metrics/prometheus` — Prometheus export format
-- `/metrics/otel` — OpenTelemetry export format
-
-**Why it's useful:** Get instant visibility into your API's health, performance, and errors—without setting up external monitoring tools. Perfect for development, and can feed into production monitoring systems like Grafana.
-
----
-
-## 📖 Detailed Usage
-
-### Basic Error Handling
-
-```js
-import express from 'express';
-import crashless from 'crashless';
-
-const app = express();
-crashless.handleAsync(app);
-
-// Regular async route - errors are caught automatically
+```javascript
+// ❌ WITHOUT CRASHLESS - Server crashes
 app.get('/users/:id', async (req, res) => {
-  const user = await db.getUser(req.params.id);
-  if (!user) {
-    throw crashless.createError('User not found', 404, 'USER_NOT_FOUND');
-  }
+  const user = await db.getUser(req.params.id); // 💥 Unhandled rejection = crash
   res.json(user);
 });
-
-// Regular error - also caught automatically
-app.get('/data', (req, res) => {
-  throw new Error('Something went wrong');
-});
-
-app.use(crashless()); // MUST be last
 ```
 
-### Creating Custom Errors
+### The Solution
 
-```js
-// Simple error
-throw crashless.createError('Invalid input', 400, 'INVALID_INPUT');
-
-// Error with details
-throw crashless.createError(
-  'Validation failed',
-  422,
-  'VALIDATION_ERROR',
-  {
-    field: 'email',
-    rule: 'must be a valid email'
-  }
-);
-
-// Error with custom client message (for production)
-const err = crashless.createError(
-  'Database connection failed: postgres://...',
-  500,
-  'DB_ERROR'
-);
-err.clientMessage = 'Service temporarily unavailable';
-throw err;
-```
-
-### Telemetry Integration
-
-```js
-// Option 1: Using onTelemetry callback
-app.use(crashless({
-  onTelemetry: (err, meta) => {
-    console.log(`Error on ${meta.method} ${meta.path}: ${err.message}`);
-    // Send to your monitoring service
-  }
-}));
-
-// Option 2: Using registerExporter (global)
-crashless.registerExporter('sentry', (err, meta) => {
-  Sentry.captureException(err, {
-    contexts: {
-      request: {
-        method: meta.method,
-        url: meta.path,
-        headers: { 'user-agent': meta.userAgent }
-      }
-    }
-  });
-});
-
-// Both work simultaneously!
-```
-
-### Production Configuration
-
-```js
-// Production setup with all safety features
-app.use(crashless({
-  maskMessages: true,        // Hide sensitive info (default in production)
-  log: true,                 // Enable logging
-  defaultStatus: 500,        // Default status for errors without status
-  onTelemetry: (err, meta) => {
-    // Send to monitoring
-  }
-}));
-```
-
----
-
-## ⚙️ Configuration Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `maskMessages` | `boolean` | `true` (in production) | Hide sensitive error messages in production |
-| `log` | `boolean` | `true` | Enable console error logging |
-| `defaultStatus` | `number` | `500` | Default HTTP status code for errors without status |
-| `onTelemetry` | `function` | `undefined` | Callback function for telemetry (err, meta) => void |
-| `enableMetrics` | `boolean` | `true` | Enable metrics collection and tracking |
-| `enableDashboard` | `boolean` | `true` | Enable dashboard route (requires `enableMetrics: true`) |
-| `dashboardPath` | `string` | `'/crashless'` | Path for the dashboard route |
-| `metricsPath` | `string` | `'/metrics.json'` | Base path for metrics endpoints |
-
-**Note:** Stack traces are automatically hidden in production (`NODE_ENV=production`).
-
----
-
-## 🔧 API Reference
-
-### `crashless(options?)`
-
-Returns Express error-handling middleware.
-
-```js
-app.use(crashless()); // Use defaults
-app.use(crashless({ log: false })); // With options
-```
-
-### `crashless.handleAsync(app, options?)`
-
-Patches Express app to automatically catch async route errors.
-
-```js
-crashless.handleAsync(app); // Patch all methods
-crashless.handleAsync(app, { methods: ['get', 'post'] }); // Custom methods
-```
-
-### `crashless.createError(message, status?, code?, details?)`
-
-Creates a standardized error object.
-
-```js
-crashless.createError('Error message', 400, 'ERROR_CODE', { extra: 'data' });
-```
-
-### `crashless.registerExporter(name, fn)`
-
-Registers a global telemetry exporter.
-
-```js
-crashless.registerExporter('my-exporter', (err, meta) => {
-  // Handle error
-});
-```
-
-### `crashless.requestTracker`
-
-Request tracking middleware to mount before your routes (v0.3.0).
-
-```js
-const crashlessMiddleware = crashless({ enableMetrics: true });
-app.use(crashlessMiddleware.requestTracker);
-```
-
-### `crashless.mountRoutes(app)`
-
-Mounts dashboard and metrics routes on the Express app (v0.3.0).
-
-```js
-crashlessMiddleware.mountRoutes(app);
-// Creates routes at:
-// - /crashless (dashboard)
-// - /metrics.json (JSON metrics)
-// - /metrics/prometheus (Prometheus format)
-// - /metrics/otel (OpenTelemetry format)
-```
-
-### Metrics Utilities (v0.3.0)
-
-```js
-import { getMetrics, exportPrometheus, exportOpenTelemetry } from 'crashless';
-
-// Get current metrics as JSON
-const metrics = getMetrics();
-
-// Export in Prometheus format
-const prometheusText = exportPrometheus();
-
-// Export in OpenTelemetry format
-const otelData = exportOpenTelemetry();
-```
-
----
-
-## 📝 Error Response Format
-
-All errors return a consistent JSON structure:
-
-```json
-{
-  "success": false,
-  "message": "Error message here",
-  "code": "ERROR_CODE",
-  "stack": "Error stack trace..." // Only in development
-}
-```
-
----
-
-## 💡 Examples
-
-> 📚 **📁 Full Examples Repository:** Check out the **[crashless-examples](https://github.com/sunnyghodeswar/crashless-examples)** repository for comprehensive examples including REST APIs, authentication, database integration, telemetry setup, and more production-ready patterns.  
-> 📁 **Quick Example:** See [`example.js`](./example.js) for a basic example in this repository.
-
-### Example 1: API with Database
-
-```js
-import express from 'express';
-import crashless from 'crashless';
-
-const app = express();
-crashless.handleAsync(app);
-
-app.get('/users/:id', async (req, res) => {
-  const user = await db.getUser(req.params.id);
-  if (!user) {
-    throw crashless.createError('User not found', 404, 'USER_NOT_FOUND');
-  }
-  res.json(user);
-});
-
-app.post('/users', async (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    throw crashless.createError('Email required', 422, 'VALIDATION_ERROR');
-  }
-  const user = await db.createUser(req.body);
-  res.status(201).json(user);
-});
-
+```javascript
+// ✅ WITH CRASHLESS - Server stays alive
 app.use(crashless());
+
+app.get('/users/:id', async (req, res) => {
+  const user = await db.getUser(req.params.id); // 🛡️ Caught & logged
+  res.json(user);
+});
 ```
 
-### Example 2: With Sentry Integration
+### What You Get
 
-```js
-import crashless from 'crashless';
-import * as Sentry from '@sentry/node';
+- 🛡️ **Automatic error handling** - Never crash from unhandled errors
+- 📊 **Built-in dashboard** - Real-time metrics, errors, and traces
+- 🔍 **Distributed tracing** - See exactly what happens in every request
+- 🔐 **Production-safe** - Sensitive data masked automatically
+- ⚡ **Zero npm dependencies** - Uses only Node.js built-ins
 
-// Register Sentry exporter
-crashless.registerExporter('sentry', (err, meta) => {
-  Sentry.captureException(err, {
-    tags: {
-      path: meta.path,
-      method: meta.method,
-      status: meta.status
-    }
-  });
-});
+---
 
+## 🎨 Dashboard
+
+### System Overview
+
+![System Overview](https://raw.githubusercontent.com/sunnyghodeswar/crashless-examples/main/screenshots/system-overview.png)
+
+### Route Performance
+
+![Route Performance](https://raw.githubusercontent.com/sunnyghodeswar/crashless-examples/main/screenshots/route-level-performance.png)
+
+### Error Analytics
+
+![Error Analytics](https://raw.githubusercontent.com/sunnyghodeswar/crashless-examples/main/screenshots/error-analytics.png)
+
+### Distributed Tracing (Waterfall View)
+
+![Distributed Tracing](https://raw.githubusercontent.com/sunnyghodeswar/crashless-examples/refs/heads/main/screenshots/distributed-tracing-waterfall-view.png)
+
+---
+
+## 📊 Performance
+
+**Verified benchmarks** (Node.js v24.3.0, M3 Pro, 50 concurrent users, averaged over 5 runs):
+
+| Configuration | Throughput (req/s) | Overhead |
+|--------------|-------------------|----------|
+| **Plain Express** | 15,761 | — |
+| **Crashless (minimal)** | 15,406 | +2.3% |
+| **Crashless (+metrics)** | 13,082 | +20.5% |
+| **Crashless (+traces 100%)** | 11,963 | +31.8% |
+| **Crashless (+traces 20%)** | 12,390 | +27.2% |
+| **express-async-errors** | 6,919 | +127.8% |
+
+**Key Insight:** Crashless is **~2.2× faster** than express-async-errors with full observability.
+
+[Run benchmarks yourself →](benchmark/README.md)
+
+---
+
+## 🧠 Recommended Configs
+
+| Environment | Configuration | Overhead |
+|-------------|---------------|----------|
+| **High-Traffic** | `telemetry: { engine: 'none' }` | ~2-3% |
+| **Production** | `telemetry: { engine: 'builtin' }` | ~18-21% |
+| **Debugging** | `traces: { samplingRate: 0.1 }` | ~24-27% |
+| **Development** | `traces: { enabled: true }` | ~30-32% |
+
+### Examples
+
+**High-Traffic Production:**
+
+```javascript
 app.use(crashless({
-  onTelemetry: (err, meta) => {
-    console.log(`[${meta.method}] ${meta.path} - ${err.message}`);
+  telemetry: { engine: 'none' }
+}));
+```
+
+**Standard Production:**
+
+```javascript
+app.use(crashless({
+  telemetry: { engine: 'builtin' }
+}));
+```
+
+**Production + Observability:**
+
+```javascript
+app.use(crashless({
+  telemetry: {
+    engine: 'builtin',
+    traces: { enabled: true, samplingRate: 0.2 }
   }
 }));
 ```
 
-### Example 3: Custom Error Handling
+---
 
-```js
-app.get('/protected', async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (!token) {
-    throw crashless.createError('Missing token', 401, 'AUTH_MISSING');
-  }
-  
-  const user = await validateToken(token);
-  if (!user) {
-    const err = crashless.createError('Invalid token', 401, 'AUTH_INVALID');
-    err.clientMessage = 'Please login again';
-    throw err;
-  }
-  
-  res.json({ user });
-});
-```
+## ⚖️ Comparison
 
-### Example 4: With Observability Dashboard (v0.3.0)
-
-```js
-import express from 'express';
-import crashless from 'crashless';
-
-const app = express();
-crashless.handleAsync(app);
-
-// Initialize with observability enabled
-const crashlessMiddleware = crashless({
-  enableMetrics: true,
-  enableDashboard: true,
-  dashboardPath: '/crashless',
-  metricsPath: '/metrics.json',
-});
-
-// Mount request tracking (before routes)
-app.use(crashlessMiddleware.requestTracker);
-
-// Mount dashboard and metrics routes
-crashlessMiddleware.mountRoutes(app);
-
-// Your routes
-app.get('/users/:id', async (req, res) => {
-  const user = await db.getUser(req.params.id);
-  res.json(user);
-});
-
-// Mount error handler (after routes)
-app.use(crashlessMiddleware);
-
-app.listen(3000);
-// Visit http://localhost:3000/crashless to see the dashboard!
-```
-
-### Example 5: Integration with Prometheus/Grafana
-
-```js
-// Crashless exports metrics in Prometheus format
-// Scrape from: http://your-server/metrics/prometheus
-
-// In Prometheus config (prometheus.yml):
-// scrape_configs:
-//   - job_name: 'crashless'
-//     scrape_interval: 15s
-//     static_configs:
-//       - targets: ['localhost:3000']
-//     metrics_path: '/metrics/prometheus'
-```
+| Feature | Crashless | express-async-errors | APM Tools |
+|---------|-----------|----------------------|-----------|
+| Async error handling | ✅ | ✅ | ⚠️ Config |
+| Server crash prevention | ✅ | ⚠️ Partial | ⚠️ External |
+| Built-in dashboard | ✅ | ❌ | ✅ Remote |
+| Distributed tracing | ✅ | ❌ | ✅ |
+| Zero dependencies | ✅ | ❌ | ❌ |
+| Local metrics | ✅ | ❌ | ⚠️ Cloud |
+| Free & open source | ✅ | ✅ | ❌ |
+| Avg overhead | ~3-27% | ~130% | ~40-70% |
 
 ---
 
-## 🤔 FAQ
+## 🎮 Try It Live
 
-### Do I need to use `handleAsync`?
+**StackBlitz Examples:**
 
-**Recommended:** Yes, if you use async/await in your routes. Without it, async errors might not be caught properly.
-
-### Do I need try/catch blocks?
-
-**No!** Crashless handles all errors automatically. You can still use try/catch if you need custom error handling logic.
-
-### Can I use multiple exporters?
-
-**Yes!** Call `registerExporter` multiple times. All exporters will be called when errors occur.
-
-### Does it work with existing error handlers?
-
-**Yes!** Crashless is just Express middleware. You can combine it with other middleware, but make sure Crashless is mounted **last**.
-
-### What about errors thrown in middleware?
-
-**They're caught too!** As long as you've called `handleAsync(app)` and mounted Crashless middleware, all errors are handled.
+- [Interactive Demo](https://stackblitz.com/github/sunnyghodeswar/crashless-examples)
+- [One-Liner Setup](https://stackblitz.com/github/sunnyghodeswar/crashless-examples?file=examples%2Fexample-one-liner.js)
+- [Full Featured](https://stackblitz.com/github/sunnyghodeswar/crashless-examples?file=examples%2Fexample-full-featured.js)
 
 ---
 
-## 🎯 Why Choose Crashless?
+## 🔗 Links
 
-### vs. Existing Solutions
-
-Other packages like `express-async-handler` and `express-async-errors` catch async errors, but that's only 20% of the problem. Crashless solves the full picture:
-
-| Feature | express-async-handler | express-async-errors | Crashless |
-|---------|----------------------|---------------------|-----------|
-| Catches async errors | ✅ (manual wrap each route) | ✅ | ✅ |
-| Automatic (no wrapping) | ❌ | ✅ | ✅ |
-| Catches sync errors | ✅ | ✅ | ✅ |
-| Standardized error format | ❌ | ❌ | ✅ |
-| Production message masking | ❌ | ❌ | ✅ |
-| Telemetry/monitoring hooks | ❌ | ❌ | ✅ |
-| Request context logging | ❌ | ❌ | ✅ |
-| Custom error creation helper | ❌ | ❌ | ✅ |
-| Security-first defaults | ❌ | ❌ | ✅ |
-
-**The Difference:**
-
-- **express-async-errors** = Catches errors (20% of the solution)
-- **Crashless** = Catches errors + Professional handling + Monitoring + Security (100% solution)
-
-**What you get with Crashless that others don't provide:**
-
-🎯 Consistent JSON error responses across your entire API  
-🔒 Automatic sanitization of sensitive data in production  
-📊 Built-in telemetry integration for Sentry, Datadog, etc.  
-📝 Automatic request context logging (method, path, timestamp, user-agent)  
-🛡️ Production-safe by default (masks passwords, database URLs, stack traces)
-
----
-
-### vs. Manual Error Handling
-
-| Challenge | Without Crashless | With Crashless |
-|-----------|------------------|----------------|
-| **Server crashes from async errors** | ❌ Need try/catch everywhere or risk crashes | ✅ Automatically caught - never crash |
-| **Sensitive info leaked to users** | ❌ Stack traces expose passwords, paths | ✅ Auto-masked in production |
-| **Inconsistent error responses** | ❌ Every endpoint returns different format | ✅ Unified JSON structure |
-| **No visibility into production errors** | ❌ Manual logging, no alerts | ✅ Built-in telemetry hooks |
-| **Verbose, repetitive code** | ❌ Try/catch blocks clutter every route | ✅ Clean, minimal code |
-| **Hard to debug production issues** | ❌ No context when errors occur | ✅ Automatic request metadata logging |
-| **Security vulnerabilities** | ❌ Easy to accidentally expose secrets | ✅ Production-safe by default |
-| **Team onboarding** | ❌ New devs forget error handling | ✅ Safety net catches mistakes |
-
----
-
-## 🧱 Why Crashless?
-
-| Problem | Without Crashless | With Crashless |
-|---------|------------------|----------------|
-| **Async errors crash server** | ❌ Need try/catch everywhere | ✅ Automatically caught |
-| **Sensitive info leaked** | ❌ Expose stack traces/paths | ✅ Masked in production |
-| **Inconsistent error format** | ❌ Different formats everywhere | ✅ Unified JSON structure |
-| **No error tracking** | ❌ Manual logging required | ✅ Built-in telemetry hooks |
-| **Verbose code** | ❌ Try/catch blocks everywhere | ✅ Clean, minimal code |
+- 📦 [npm Package](https://www.npmjs.com/package/crashless)
+- 📚 [Documentation](https://sunnyghodeswar.github.io/crashless/)
+- 💻 [GitHub Repository](https://github.com/sunnyghodeswar/crashless)
+- 🖼️ [Screenshots](https://github.com/sunnyghodeswar/crashless-examples/tree/main/screenshots)
+- 🐛 [Issues](https://github.com/sunnyghodeswar/crashless/issues)
+- 💬 [Discussions](https://github.com/sunnyghodeswar/crashless/discussions)
 
 ---
 
@@ -773,17 +215,10 @@ MIT © [Sunny Ghodeswar](https://github.com/sunnyghodeswar)
 
 ---
 
-## 🙏 Contributing
+<div align="center">
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+**Production-ready observability without the complexity.**
 
----
+[Get Started](https://www.npmjs.com/package/crashless) • [Documentation](https://sunnyghodeswar.github.io/crashless/) • [Try Demo](https://stackblitz.com/github/sunnyghodeswar/crashless-examples)
 
-## 📚 Related
-
-- [Express.js](https://expressjs.com/) - Web framework
-- [Vegaa](https://github.com/vegaa/vegaa) - Alternative framework
-
----
-
-Made with ❤️ for the Node.js community
+</div>

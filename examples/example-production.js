@@ -10,7 +10,7 @@
  */
 
 import express from 'express';
-import crashless from '../src/crashless.js';
+import crashless from '../src/index.js';
 
 const PORT = 3002;
 const app = express();
@@ -101,9 +101,44 @@ app.listen(PORT, () => {
   console.log('  GET  /safe-error (uses clientMessage)\n');
 });
 
-// Generate some load
-setTimeout(() => {
-  fetch(`http://localhost:${PORT}/users/1`).catch(() => {});
-  fetch(`http://localhost:${PORT}/users/404`).catch(() => {});
-}, 1000);
+// Automatic simulation - no manual route calling required
+async function startSimulation() {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log('🔄 Starting automatic simulation...\n');
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/users/${Math.floor(Math.random() * 5)}`);
+    } catch {}
+  }, 2500);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: `user${Math.random()}@example.com` })
+      });
+    } catch {}
+  }, 4000);
+  
+  setInterval(async () => {
+    if (Math.random() > 0.7) {
+      try {
+        await fetch(`http://localhost:${PORT}/sensitive-error`);
+      } catch {}
+    }
+  }, 5000);
+  
+  setInterval(async () => {
+    if (Math.random() > 0.8) {
+      try {
+        await fetch(`http://localhost:${PORT}/safe-error`);
+      } catch {}
+    }
+  }, 6000);
+}
+
+startSimulation();
 

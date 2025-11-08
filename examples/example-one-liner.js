@@ -8,7 +8,7 @@
  */
 
 import express from 'express';
-import crashless from '../src/crashless.js';
+import crashless from '../src/index.js';
 
 const PORT = 3010;
 const app = express();
@@ -74,14 +74,46 @@ app.listen(PORT, () => {
   console.log(`   That's it! Everything is automatic!\n`);
 });
 
-// Generate some load to populate the dashboard
-setInterval(() => {
-  fetch(`http://localhost:${PORT}/users/${Math.floor(Math.random() * 10)}`).catch(() => {});
-}, 3000);
+// Automatic simulation - no manual route calling required
+async function startSimulation() {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log('\n🔄 Starting automatic simulation...\n');
+  
+  // Simulate various requests
+  setInterval(async () => {
+    const userId = Math.floor(Math.random() * 10);
+    try {
+      await fetch(`http://localhost:${PORT}/users/${userId}`);
+    } catch {}
+  }, 2000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/`);
+    } catch {}
+  }, 3000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/api/data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ test: 'data' })
+      });
+    } catch {}
+  }, 4000);
+  
+  setInterval(async () => {
+    if (Math.random() > 0.7) {
+      try {
+        await fetch(`http://localhost:${PORT}/error`);
+      } catch {}
+    }
+  }, 5000);
+  
+  console.log('✅ Simulation running - check the dashboard at http://localhost:' + PORT + '/_crashless\n');
+}
 
-setInterval(() => {
-  if (Math.random() > 0.7) {
-    fetch(`http://localhost:${PORT}/error`).catch(() => {});
-  }
-}, 5000);
+startSimulation();
 

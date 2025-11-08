@@ -13,7 +13,7 @@
  */
 
 import express from 'express';
-import crashless from '../src/crashless.js';
+import crashless from '../src/index.js';
 
 const PORT = 3007;
 const app = express();

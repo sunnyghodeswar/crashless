@@ -7,7 +7,7 @@
  */
 
 import express from 'express';
-import crashless from '../src/crashless.js';
+import crashless from '../src/index.js';
 
 const PORT = 3001;
 const app = express();
@@ -46,4 +46,25 @@ app.listen(PORT, () => {
   console.log(`\n🚀 Basic Example - http://localhost:${PORT}`);
   console.log('   No telemetry, no dashboard\n');
 });
+
+// Automatic simulation
+async function startSimulation() {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log('🔄 Starting automatic simulation...\n');
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/users/${Math.floor(Math.random() * 5)}`);
+    } catch {}
+  }, 2000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/error`);
+    } catch {}
+  }, 4000);
+}
+
+startSimulation();
 

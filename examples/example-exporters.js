@@ -7,7 +7,7 @@
  */
 
 import express from "express";
-import crashless from "../src/crashless.js";
+import crashless from "../src/index.js";
 
 const PORT = 3006;
 const app = express();
@@ -144,27 +144,73 @@ app.listen(PORT, () => {
   console.log("Watch console for exporter output when errors occur!\n");
 });
 
-// Test different error types
-setTimeout(() => {
-  console.log("\n🧪 Testing exporters...\n");
+// Automatic simulation - no manual route calling required
+async function startSimulation() {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log("\n🧪 Starting automatic simulation...\n");
 
-  setTimeout(
-    () => fetch(`http://localhost:${PORT}/users/404`).catch(() => {}),
-    500
-  );
-  setTimeout(
-    () => fetch(`http://localhost:${PORT}/db-error`).catch(() => {}),
-    1000
-  );
-  setTimeout(
-    () => fetch(`http://localhost:${PORT}/auth-error`).catch(() => {}),
-    1500
-  );
-  setTimeout(() => {
-    fetch(`http://localhost:${PORT}/users`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "No Email" }),
-    }).catch(() => {});
+  // Initial test run
+  setTimeout(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/users/404`);
+    } catch {}
+  }, 500);
+  
+  setTimeout(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/db-error`);
+    } catch {}
+  }, 1000);
+  
+  setTimeout(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/auth-error`);
+    } catch {}
+  }, 1500);
+  
+  setTimeout(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "No Email" }),
+      });
+    } catch {}
   }, 2000);
-}, 2000);
+
+  // Continuous simulation
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/users/${Math.floor(Math.random() * 5)}`);
+    } catch {}
+  }, 3000);
+  
+  setInterval(async () => {
+    if (Math.random() > 0.7) {
+      try {
+        await fetch(`http://localhost:${PORT}/db-error`);
+      } catch {}
+    }
+  }, 5000);
+  
+  setInterval(async () => {
+    if (Math.random() > 0.8) {
+      try {
+        await fetch(`http://localhost:${PORT}/auth-error`);
+      } catch {}
+    }
+  }, 6000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: `user${Math.random()}@example.com` })
+      });
+    } catch {}
+  }, 4000);
+}
+
+startSimulation();

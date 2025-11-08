@@ -27,7 +27,8 @@ import {
   configureTracing,
   getTracingStats,
   autoPatchFetch,
-  autoPatchFs
+  autoPatchFs,
+  shouldSampleTrace
 } from './tracing.js';
 
 /* ------------------------ Defaults & Globals --------------------------- */
@@ -40,11 +41,13 @@ const DEFAULTS = {
   appName: 'Crashless API',
   telemetry: {
     engine: 'builtin',
-    dashboard: true,
+    dashboard: process.env.NODE_ENV !== 'production', // Disabled in production by default
     route: '/_crashless',
     exportInterval: 5000,
     version: 'v2',
   },
+  // Dashboard security: function that returns true if request is allowed
+  dashboardAuth: null, // null = no auth, function(req) => boolean = custom auth
 };
 
 /**
@@ -53,17 +56,26 @@ const DEFAULTS = {
  * @param {string} path - Request path
  * @returns {boolean} True if path is internal
  */
+// Optimized: Use Set for O(1) exact match lookup, then check prefixes
+const INTERNAL_EXACT_PATHS = new Set([
+  '/metrics.json',
+  '/traces.json',
+  '/metrics',
+  '/metrics/otel',
+  '/_crashless',
+  '/health',
+]);
+const INTERNAL_PREFIXES = ['/_crashless/', '/metrics/', '/health/'];
+
 function isInternalEndpoint(path) {
   if (!path) return false;
-  const internalPatterns = [
-    '/metrics.json',
-    '/traces.json',
-    '/metrics',
-    '/metrics/otel',
-    '/_crashless',
-    '/health', // Optional: remove if you want to track health checks
-  ];
-  return internalPatterns.some(pattern => path === pattern || path.startsWith(pattern + '/'));
+  // Fast exact match check
+  if (INTERNAL_EXACT_PATHS.has(path)) return true;
+  // Check prefixes (only for paths that need it)
+  for (const prefix of INTERNAL_PREFIXES) {
+    if (path.startsWith(prefix)) return true;
+  }
+  return false;
 }
 
 let globalTelemetryConfig = { ...DEFAULTS.telemetry };
@@ -166,7 +178,7 @@ function createError(message, status = 500, code = 'ERR_INTERNAL', details = und
       try {
         Layer = (await import('express/lib/router/layer')).default;
       } catch {
-        console.warn('⚠️ Crashless async patch: cannot find express Layer');
+        // Express Layer module not found - async patching unavailable
         return;
       }
     }
@@ -189,24 +201,41 @@ function createError(message, status = 500, code = 'ERR_INTERNAL', details = und
     };
 
     Layer.__crashlessPatched = true;
-    console.log('✅ Crashless async support enabled (Layer patch)');
   } catch (err) {
-    console.warn('⚠️ Crashless async patch failed:', err.message);
+    // Async patching failed - errors will still be caught by error handler
   }
 })();
 
 /* ------------------------ Middleware Factory --------------------------- */
 function crashlessFactory(opts = {}) {
-  const telemetryConfig = { ...DEFAULTS.telemetry, ...globalTelemetryConfig, ...(opts.telemetry || {}) };
-  const options = {
-    ...DEFAULTS,
-    ...opts,
+  // Optimized: Use Object.assign instead of spread for better performance
+  const telemetryConfig = Object.assign({}, DEFAULTS.telemetry, globalTelemetryConfig, opts.telemetry || {});
+  
+  // Handle dashboard auth - support IP whitelist via environment variable
+  let dashboardAuth = opts.dashboardAuth;
+  if (!dashboardAuth && process.env.DASHBOARD_ALLOWED_IPS) {
+    const allowedIPs = process.env.DASHBOARD_ALLOWED_IPS.split(',').map(ip => ip.trim());
+    dashboardAuth = (req) => {
+      const clientIP = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || 'unknown';
+      return allowedIPs.includes(clientIP) || clientIP === '127.0.0.1' || clientIP === '::1';
+    };
+  }
+  
+  // If enableDashboard is explicitly set to true, also enable telemetry.dashboard
+  // This allows dashboard to work in production when explicitly enabled with security
+  if (opts.enableDashboard === true && telemetryConfig.dashboard === false) {
+    telemetryConfig.dashboard = true;
+  }
+  
+  // Optimized: Use Object.assign instead of spread for better performance
+  const options = Object.assign({}, DEFAULTS, opts, {
     telemetry: telemetryConfig,
     enableMetrics: opts.enableMetrics !== undefined ? opts.enableMetrics : telemetryConfig.engine !== 'none',
     enableDashboard: opts.enableDashboard !== undefined ? opts.enableDashboard : telemetryConfig.dashboard,
     dashboardPath: opts.dashboardPath || telemetryConfig.route,
     metricsPath: opts.metricsPath || '/metrics.json',
-  };
+    dashboardAuth: dashboardAuth !== undefined ? dashboardAuth : DEFAULTS.dashboardAuth,
+  });
 
   // Configure tracing if telemetry.traces is provided
   if (telemetryConfig.traces) {
@@ -225,10 +254,15 @@ function crashlessFactory(opts = {}) {
   }
 
   function requestTracker(req, res, next) {
-    req.__crashlessStartTime = Date.now();
+    // Optimized: Cache Date.now() once per request
+    const requestStartTime = Date.now();
+    req.__crashlessStartTime = requestStartTime;
+    
+    // Optimized: Extract and cache path once per request
+    const path = req.route ? req.route.path : req.path || req.originalUrl || 'unknown';
+    req.__crashlessPath = path; // Cache for reuse
     
     // Skip internal observability endpoints - don't track metrics or traces for these
-    const path = req.route ? req.route.path : req.path || req.originalUrl || 'unknown';
     if (isInternalEndpoint(path)) {
       return next(); // Skip all instrumentation for internal endpoints
     }
@@ -239,22 +273,36 @@ function crashlessFactory(opts = {}) {
     res.__crashlessEndWrapped = true;
     res.__crashlessRequestRecorded = false; // Flag to prevent double counting
 
-    // Start trace for this request
+    // Optimized: Check sampling FIRST before creating any objects
     const method = req.method || 'UNKNOWN';
-    const traceContext = startTrace({
-      name: `${method} ${path}`,
-      attributes: {
-        'http.method': method,
-        'http.path': path,
-        'http.route': path,
-        'http.target': req.originalUrl || req.url || path,
-        'http.scheme': req.protocol || 'http',
-        'http.host': req.get?.('host') || req.hostname || 'unknown',
-        'http.user_agent': req.get?.('user-agent') || '',
-        'http.request_id': req.id || '',
-      },
-      shouldSample: true,
-    });
+    let traceContext = null;
+    
+    // Only check tracing if it's enabled (check config, not registry directly)
+    const tracingEnabled = telemetryConfig.traces?.enabled !== false;
+    if (tracingEnabled && shouldSampleTrace()) {
+      // Only collect expensive attributes if we're actually sampling
+      // Optimized: Cache expensive property accesses to avoid repeated lookups
+      const originalUrl = req.originalUrl || req.url || path;
+      const protocol = req.protocol || 'http';
+      const host = req.get?.('host') || req.hostname || 'unknown';
+      const userAgent = req.get?.('user-agent') || '';
+      const requestId = req.id || '';
+      
+      traceContext = startTrace({
+        name: `${method} ${path}`,
+        attributes: {
+          'http.method': method,
+          'http.path': path,
+          'http.route': path,
+          'http.target': originalUrl,
+          'http.scheme': protocol,
+          'http.host': host,
+          'http.user_agent': userAgent,
+          'http.request_id': requestId,
+        },
+        shouldSample: true,
+      });
+    }
 
     // If tracing is disabled or not sampled, continue without trace context
     if (!traceContext) {
@@ -263,12 +311,14 @@ function crashlessFactory(opts = {}) {
         if (res.__crashlessErrorHandled && res.__crashlessRequestRecorded) {
           return originalEnd(...args);
         }
-        const latency = Date.now() - req.__crashlessStartTime;
+        // Optimized: Use cached start time and pass timestamp to avoid Date.now()
+        const endTime = Date.now();
+        const latency = endTime - requestStartTime;
         const status = res.statusCode || 200;
         if (!res.__crashlessErrorHandled) {
           queueMicrotask(() => {
             try {
-              recordRequest(method, path, status, latency);
+              recordRequest(method, path, status, latency, false, endTime);
             } catch (_) {}
           });
         }
@@ -279,6 +329,8 @@ function crashlessFactory(opts = {}) {
 
     // Store trace context in request for error handler
     req.__crashlessTraceId = traceContext.traceId;
+    // Optimized: Cache trace context in request to avoid AsyncLocalStorage lookups
+    req.__crashlessTraceContext = traceContext;
 
     // Run request in trace context
     runInTraceContext(traceContext, () => {
@@ -286,7 +338,7 @@ function crashlessFactory(opts = {}) {
       res.end = function (...args) {
         // CRITICAL: If error handler already recorded this request, skip to prevent double counting
         if (res.__crashlessErrorHandled && res.__crashlessRequestRecorded) {
-          // Still end the trace
+          // Optimized: Batch trace end in single microtask
           queueMicrotask(() => {
             try {
               endTrace(traceContext.traceId);
@@ -295,7 +347,9 @@ function crashlessFactory(opts = {}) {
           return originalEnd(...args);
         }
         
-        const latency = Date.now() - req.__crashlessStartTime;
+        // Optimized: Use cached start time and pass timestamp to avoid Date.now()
+        const endTime = Date.now();
+        const latency = endTime - requestStartTime;
         const status = res.statusCode || 200;
         
         // Update span with final attributes
@@ -308,21 +362,16 @@ function crashlessFactory(opts = {}) {
         const spanStatus = status >= 500 ? 'error' : status >= 400 ? 'unset' : 'ok';
         endSpan({ status: spanStatus });
         
-        // End trace
+        // Optimized: Batch all async operations in single microtask
         queueMicrotask(() => {
           try {
             endTrace(traceContext.traceId);
+            // Only record if error handler hasn't already done it
+            if (!res.__crashlessErrorHandled) {
+              recordRequest(method, path, status, latency, false, endTime);
+            }
           } catch (_) {}
         });
-        
-        // Only record if error handler hasn't already done it
-        if (!res.__crashlessErrorHandled) {
-          queueMicrotask(() => {
-            try {
-              recordRequest(method, path, status, latency);
-            } catch (_) {}
-          });
-        }
         
         return originalEnd(...args);
       };
@@ -333,8 +382,10 @@ function crashlessFactory(opts = {}) {
   function crashlessErrorHandler(err, req, res, next) {
     if (res.headersSent) return next(err);
 
+    // Optimized: Use cached path if available
+    const path = req.__crashlessPath || req.path || (req.route && req.route.path) || req.originalUrl || 'unknown';
+    
     // Skip internal observability endpoints - don't track errors for these
-    const path = req.path || (req.route && req.route.path) || req.originalUrl || 'unknown';
     if (isInternalEndpoint(path)) {
       // Still handle the error, but don't instrument it
       return next(err);
@@ -359,7 +410,9 @@ function crashlessFactory(opts = {}) {
     };
     if (exposeStack && err && err.stack) payload.stack = err.stack;
 
-    const latency = req.__crashlessStartTime ? Date.now() - req.__crashlessStartTime : 0;
+    // Optimized: Use cached start time if available
+    const requestStartTime = req.__crashlessStartTime || Date.now();
+    const latency = Date.now() - requestStartTime;
 
     if (options.enableMetrics && options.telemetry.engine !== 'none') {
       const errorCode = normalized.code || `ERR_${String(status)}`;
@@ -388,9 +441,11 @@ function crashlessFactory(opts = {}) {
 
         // Update trace span with error details if trace exists
         if (traceId) {
+          // Optimized: Batch trace operations in single microtask
           queueMicrotask(() => {
             try {
-              const context = getTraceContext();
+              // Optimized: Use cached trace context from request
+              const context = getTraceContext(req);
               if (context && context.traceId === traceId) {
                 addSpanAttributes({
                   'http.status_code': status,
@@ -420,17 +475,20 @@ function crashlessFactory(opts = {}) {
       } catch {}
     }
 
+    // Optimized: Batch all async operations (logging, exporters, telemetry) in single microtask
     queueMicrotask(() => {
       // Don't log or export errors for internal endpoints (path already checked above, but extra safety)
       if (isInternalEndpoint(path)) {
         return;
       }
 
+      // Optimized: Cache Date.now() result for timestamp
+      const now = Date.now();
       const meta = {
         method: req.method,
         path: req.path,
         status,
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(now).toISOString(),
         latency,
         app: { name: options.appName, env: process.env.NODE_ENV || 'development' },
         telemetry: { engine: options.telemetry.engine, version: 'v1.0' },
@@ -454,8 +512,10 @@ function crashlessFactory(opts = {}) {
   let routesMounted = false;
 
   function crashlessWrapper(err, req, res, next) {
-    // 4-arg signature = error handler
-    if (err instanceof Error || (err && err.message)) return crashlessErrorHandler(err, req, res, next);
+    // 4-arg signature = error handler (next is function)
+    if (typeof next === 'function') {
+      return crashlessErrorHandler(err, req, res, next);
+    }
     
     // 3-arg signature = regular middleware (request tracker)
     const actualReq = err;
@@ -468,7 +528,8 @@ function crashlessFactory(opts = {}) {
       try {
         crashlessWrapper.mountRoutes(actualReq.app);
       } catch (e) {
-        console.warn('[Crashless] Failed to auto-mount routes:', e.message);
+        // Routes mounting failed - dashboard/metrics endpoints may not be available
+        // This is non-fatal, error handling will still work
       }
     }
     
@@ -479,30 +540,82 @@ function crashlessFactory(opts = {}) {
   crashlessWrapper.registerExporter = registerExporter;
   crashlessWrapper.__isCrashlessMiddleware = true;
 
+  // Optimized: Cache auth check function per middleware instance to avoid repeated checks
+  const checkDashboardAccess = (() => {
+    // If no auth function, return a simple function that always returns true
+    if (!options.dashboardAuth) {
+      return () => true;
+    }
+    
+    // If auth is explicitly false, return a function that always returns false
+    if (options.dashboardAuth === false) {
+      return () => false;
+    }
+    
+    // If auth is a function, cache it and return wrapper
+    if (typeof options.dashboardAuth === 'function') {
+      const authFn = options.dashboardAuth;
+      return (req) => {
+        try {
+          return authFn(req) === true;
+        } catch (err) {
+          // If auth function throws, deny access for security
+          return false;
+        }
+      };
+    }
+    
+    // Fallback
+    return () => true;
+  })();
+
   crashlessWrapper.mountRoutes = function (app) {
     try {
+      // Dashboard enabled if: enableDashboard is true AND telemetry.dashboard is true
+      // Note: In production, telemetry.dashboard defaults to false for security,
+      // but can be explicitly enabled with enableDashboard: true + security (IP whitelist/token)
       if (options.enableDashboard && options.telemetry.dashboard) {
         const basePath = options.dashboardPath || '/_crashless';
         
-        // Main dashboard (defaults to system overview)
-        app.get(basePath, (req, res) =>
-          res.send(getDashboardHTML(basePath, options.maskMessages, options.appName))
-        );
-        app.get(`${basePath}/system`, (req, res) =>
-          res.send(getDashboardHTML(`${basePath}/system`, options.maskMessages, options.appName))
-        );
-        app.get(`${basePath}/crashes`, (req, res) =>
-          res.send(getDashboardHTML(`${basePath}/crashes`, options.maskMessages, options.appName))
-        );
-        app.get(`${basePath}/errors`, (req, res) =>
-          res.send(getDashboardHTML(`${basePath}/crashes`, options.maskMessages, options.appName))
-        );
-        app.get(`${basePath}/traces`, (req, res) =>
-          res.send(getDashboardHTML(`${basePath}/traces`, options.maskMessages, options.appName))
-        );
-        app.get(`${basePath}/performance`, (req, res) =>
-          res.send(getDashboardHTML(`${basePath}/system`, options.maskMessages, options.appName))
-        );
+        // Optimized: Create reusable auth middleware to avoid code duplication
+        const FORBIDDEN_RESPONSE = { 
+          success: false, 
+          message: 'Forbidden: Dashboard access denied',
+          code: 'DASHBOARD_FORBIDDEN'
+        };
+        
+        const requireDashboardAuth = (req, res, next) => {
+          if (!checkDashboardAccess(req)) {
+            res.status(403).json(FORBIDDEN_RESPONSE);
+            return;
+          }
+          next();
+        };
+        
+        // Dashboard route handlers
+        const dashboardHandler = (req, res) => {
+          res.send(getDashboardHTML(basePath, options.maskMessages, options.appName));
+        };
+        
+        const systemHandler = (req, res) => {
+          res.send(getDashboardHTML(`${basePath}/system`, options.maskMessages, options.appName));
+        };
+        
+        const crashesHandler = (req, res) => {
+          res.send(getDashboardHTML(`${basePath}/crashes`, options.maskMessages, options.appName));
+        };
+        
+        const tracesHandler = (req, res) => {
+          res.send(getDashboardHTML(`${basePath}/traces`, options.maskMessages, options.appName));
+        };
+        
+        // Main dashboard (defaults to system overview) - Optimized: Use auth middleware
+        app.get(basePath, requireDashboardAuth, dashboardHandler);
+        app.get(`${basePath}/system`, requireDashboardAuth, systemHandler);
+        app.get(`${basePath}/crashes`, requireDashboardAuth, crashesHandler);
+        app.get(`${basePath}/errors`, requireDashboardAuth, crashesHandler);
+        app.get(`${basePath}/traces`, requireDashboardAuth, tracesHandler);
+        app.get(`${basePath}/performance`, requireDashboardAuth, systemHandler);
       }
         if (options.enableMetrics && options.telemetry.engine !== 'none') {
           app.get(options.metricsPath || '/metrics.json', (req, res) => {
@@ -560,7 +673,8 @@ function crashlessFactory(opts = {}) {
 crashlessFactory.createError = createError;
 crashlessFactory.registerExporter = registerExporter;
 crashlessFactory.telemetry = (config) => {
-  if (config) globalTelemetryConfig = { ...globalTelemetryConfig, ...config };
+  // Optimized: Use Object.assign instead of spread
+  if (config) globalTelemetryConfig = Object.assign({}, globalTelemetryConfig, config);
   return globalTelemetryConfig;
 };
 crashlessFactory.getDashboardHTML = (opts) => {

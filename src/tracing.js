@@ -7,7 +7,7 @@
  */
 
 import { AsyncLocalStorage } from 'async_hooks';
-import { randomUUID } from 'crypto';
+import { randomBytes } from 'crypto';
 
 /**
  * Trace context stored in AsyncLocalStorage
@@ -58,19 +58,41 @@ const traceRegistry = {
   enabled: true, // Tracing enabled/disabled
 };
 
+// Optimized: Debounce cleanup to avoid running on every trace start
+let cleanupScheduled = false;
+let cleanupTimer = null;
+const CLEANUP_DEBOUNCE_MS = 5000; // Run cleanup at most once every 5 seconds
+const CLEANUP_TRACE_THRESHOLD = 10; // Only schedule cleanup if we have many traces
+
 /**
  * Generate a unique trace/span ID (32-char hex string)
+ * Optimized: Use faster ID generation (crypto.randomBytes is faster than UUID)
  */
 function generateId() {
-  return randomUUID().replace(/-/g, '');
+  // Use crypto.randomBytes for faster ID generation (avoid UUID string manipulation)
+  return randomBytes(16).toString('hex'); // 32-char hex string
 }
 
 /**
  * Get or create trace context from AsyncLocalStorage
+ * Optimized: Cache context in request object after first lookup to avoid repeated AsyncLocalStorage calls
+ * @param {Object} req - Optional request object to cache context
  * @returns {TraceContext|null}
  */
-export function getTraceContext() {
-  return traceContext.getStore() || null;
+export function getTraceContext(req = null) {
+  // If request object provided and context already cached, return cached
+  if (req && req.__crashlessTraceContext !== undefined) {
+    return req.__crashlessTraceContext;
+  }
+  
+  const context = traceContext.getStore() || null;
+  
+  // Cache in request object if provided
+  if (req) {
+    req.__crashlessTraceContext = context;
+  }
+  
+  return context;
 }
 
 /**
@@ -84,20 +106,47 @@ export function runInTraceContext(context, callback) {
 }
 
 /**
+ * Check if a trace should be sampled (fast check without creating objects)
+ * @returns {boolean} True if should sample
+ */
+export function shouldSampleTrace() {
+  if (!traceRegistry.enabled) return false;
+  
+  const rate = traceRegistry.samplingRate;
+  
+  // Handle percentage-based sampling (0-1): 0.1 = 10%, 0.2 = 20%, 1.0 = 100%
+  if (rate > 0 && rate <= 1) {
+    return Math.random() < rate;
+  }
+  
+  // Handle count-based sampling (> 1): sample 1 in N requests
+  // e.g., samplingRate = 10 means sample 1 in 10 requests
+  if (rate > 1) {
+    return Math.random() * rate < 1;
+  }
+  
+  // Invalid or zero sampling rate - don't sample
+  return false;
+}
+
+/**
  * Start a new trace for a request
  * @param {Object} options - Trace options
  * @param {string} options.name - Trace/span name
  * @param {Object} options.attributes - Initial attributes
- * @param {boolean} options.shouldSample - Whether to sample this trace
+ * @param {boolean} options.shouldSample - Whether to sample this trace (deprecated, use shouldSampleTrace() first)
  * @returns {TraceContext} Trace context
  */
 export function startTrace({ name, attributes = {}, shouldSample = true }) {
-  // Apply sampling
-  if (traceRegistry.samplingRate > 1 && shouldSample) {
+  // Note: Sampling should be checked BEFORE calling this function via shouldSampleTrace()
+  // This check is kept for backward compatibility but should be optimized away
+  // Only perform redundant check if shouldSample is true and samplingRate > 1 (count-based)
+  if (shouldSample && traceRegistry.samplingRate > 1) {
     if (Math.random() * traceRegistry.samplingRate >= 1) {
       return null; // Not sampled
     }
   }
+  // For percentage-based sampling (0-1), shouldSampleTrace() already handled it
 
   const traceId = generateId();
   const spanId = generateId();
@@ -111,6 +160,7 @@ export function startTrace({ name, attributes = {}, shouldSample = true }) {
   };
 
   // Create root span
+  // Optimized: Reuse attributes object directly instead of Object.assign (faster)
   const span = {
     traceId,
     spanId,
@@ -120,7 +170,10 @@ export function startTrace({ name, attributes = {}, shouldSample = true }) {
     duration: null, // Will be set when span ends
     kind: 'server',
     status: 'unset',
-    attributes: { ...attributes },
+    // Optimized: Use attributes directly if it's already an object, otherwise create new
+    attributes: attributes && typeof attributes === 'object' && !Array.isArray(attributes) 
+      ? attributes 
+      : Object.assign({}, attributes),
     events: [], // Events within this span (e.g., "db.findUser", "fetch.postsAPI")
     error: null,
   };
@@ -138,8 +191,15 @@ export function startTrace({ name, attributes = {}, shouldSample = true }) {
   };
   traceRegistry.traces.set(traceId, trace);
 
-  // Cleanup old traces
-  cleanupOldTraces();
+  // Optimized: Debounce cleanup - only schedule if we have many traces and not already scheduled
+  if (traceRegistry.traces.size > CLEANUP_TRACE_THRESHOLD && !cleanupScheduled) {
+    cleanupScheduled = true;
+    if (cleanupTimer) clearTimeout(cleanupTimer);
+    cleanupTimer = setTimeout(() => {
+      cleanupScheduled = false;
+      cleanupOldTraces();
+    }, CLEANUP_DEBOUNCE_MS);
+  }
 
   return context;
 }
@@ -207,7 +267,8 @@ export function startSpan({ name, kind = 'internal', attributes = {} }) {
     duration: null,
     kind,
     status: 'unset',
-    attributes: { ...attributes },
+    // Optimized: Use Object.assign instead of spread
+    attributes: Object.assign({}, attributes),
     events: [],
     error: null,
   };
@@ -296,10 +357,10 @@ export function endTrace(traceId) {
   }
   
   // Add trace with traceId for easy lookup
-  const completedTrace = {
-    ...trace,
+  // Optimized: Use Object.assign instead of spread
+  const completedTrace = Object.assign({}, trace, {
     traceId: traceId, // Ensure traceId is set
-  };
+  });
   traceRegistry.completedTraces.push(completedTrace);
   
   // Keep only the most recent traces

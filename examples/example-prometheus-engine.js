@@ -7,7 +7,7 @@
  */
 
 import express from 'express';
-import crashless from '../src/crashless.js';
+import crashless from '../src/index.js';
 
 const PORT = 3004;
 const app = express();
@@ -76,12 +76,42 @@ app.listen(PORT, () => {
   console.log(`      metrics_path: '/metrics'\n`);
 });
 
-// Generate load
-setInterval(() => {
-  fetch(`http://localhost:${PORT}/api/users/${Math.floor(Math.random() * 5)}`).catch(() => {});
-}, 2500);
+// Automatic simulation - no manual route calling required
+async function startSimulation() {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log('🔄 Starting automatic simulation...\n');
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/api/users/${Math.floor(Math.random() * 5)}`);
+    } catch {}
+  }, 2500);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/api/orders`);
+    } catch {}
+  }, 3000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/api/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: `user${Math.random()}@example.com` })
+      });
+    } catch {}
+  }, 4500);
+  
+  setInterval(async () => {
+    if (Math.random() > 0.85) {
+      try {
+        await fetch(`http://localhost:${PORT}/api/users/999`);
+      } catch {}
+    }
+  }, 5000);
+}
 
-setInterval(() => {
-  fetch(`http://localhost:${PORT}/api/orders`).catch(() => {});
-}, 3000);
+startSimulation();
 
