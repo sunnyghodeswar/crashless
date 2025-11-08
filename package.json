@@ -1,7 +1,7 @@
 {
   "name": "crashless",
   "version": "1.0.0",
-  "description": "Crashless — stability, security, smart logging, and built-in observability for Express & Vegaa.",
+  "description": "Production-ready observability for Node.js. Zero npm-dependency middleware that prevents Express servers from crashing and provides built-in monitoring.",
   "type": "module",
   "main": "src/index.js",
   "types": "index.d.ts",
