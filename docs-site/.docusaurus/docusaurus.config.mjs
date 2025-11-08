@@ -6,7 +6,7 @@
 export default {
   "title": "Crashless",
   "tagline": "Production-ready observability for Node.js",
-  "favicon": "img/favicon.ico",
+  "favicon": "img/favicon.svg",
   "url": "https://sunnyghodeswar.github.io",
   "baseUrl": "/crashless/",
   "organizationName": "sunnyghodeswar",
@@ -58,7 +58,8 @@ export default {
       "title": "Crashless",
       "logo": {
         "alt": "Crashless Logo",
-        "src": "img/logo.svg"
+        "src": "img/logo.png",
+        "srcDark": "img/logo-dark.png"
       },
       "items": [
         {
