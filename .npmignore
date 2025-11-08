@@ -1,18 +1,39 @@
-# Dependencies
-node_modules/
+# Source code (only src/ is included via package.json "files" field)
+# Explicitly exclude everything else
+
+# Examples and scripts
+examples/
+scripts/
+*.sh
+*.js
+!src/**/*.js
 
 # Testing and development files
 test/
+benchmark/
 *.test.js
 *.spec.js
-test/
 coverage/
 .nyc_output/
 
+# All README and markdown documentation files (excluded from npm package)
+README.md
+README_SCREENSHOTS.md
+*.md
+
 # Development documentation
-TEST_SCRIPTS.md
-CLEANUP.md
+API_CHANGES.md
+COMMIT_MESSAGE.md
+MITIGATION_PLAN.md
+QUICK_TEST_SECURITY.md
+ARCHITECTURE.md
+PERFORMANCE.md
+SECURITY.md
+LIMITATIONS.md
 test/README.md
+scripts/README.md
+examples/README.md
+examples/DASHBOARD_SECURITY.md
 
 # Demo files
 test/manual-demo.js

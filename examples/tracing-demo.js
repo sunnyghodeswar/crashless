@@ -208,17 +208,66 @@ app.get('/health', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3008;
 app.listen(PORT, () => {
   console.log(`🚀 Tracing Demo Server running on http://localhost:${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}/_crashless`);
   console.log(`🔍 Traces: http://localhost:${PORT}/traces.json`);
   console.log(`📈 Metrics: http://localhost:${PORT}/metrics.json`);
-  console.log(`\nTry these endpoints:`);
-  console.log(`  - GET http://localhost:${PORT}/api/users/123`);
-  console.log(`  - GET http://localhost:${PORT}/api/users/123/orders`);
-  console.log(`  - GET http://localhost:${PORT}/api/users/123/profile (multiple async ops)`);
-  console.log(`  - GET http://localhost:${PORT}/api/users/123/error`);
-  console.log(`\n💡 Make requests and check /traces.json?format=otlp to see automatic tracing!`);
+  console.log(`\n💡 Automatic simulation is running - check the dashboard!\n`);
 });
+
+// Automatic simulation - no manual route calling required
+async function startSimulation() {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log('🔄 Starting automatic simulation...\n');
+  
+  // Simulate various endpoint calls with different patterns
+  setInterval(async () => {
+    try {
+      const userId = Math.floor(Math.random() * 100) + 100;
+      await fetch(`http://localhost:${PORT}/api/users/${userId}`);
+    } catch {}
+  }, 3000);
+  
+  setInterval(async () => {
+    try {
+      const userId = Math.floor(Math.random() * 100) + 100;
+      await fetch(`http://localhost:${PORT}/api/users/${userId}/orders`);
+    } catch {}
+  }, 4000);
+  
+  setInterval(async () => {
+    try {
+      const userId = Math.floor(Math.random() * 100) + 100;
+      await fetch(`http://localhost:${PORT}/api/users/${userId}/profile`);
+    } catch {}
+  }, 5000);
+  
+  setInterval(async () => {
+    if (Math.random() > 0.8) {
+      try {
+        const userId = Math.floor(Math.random() * 100) + 100;
+        await fetch(`http://localhost:${PORT}/api/users/${userId}/error`);
+      } catch {}
+    }
+  }, 6000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/health`);
+    } catch {}
+  }, 7000);
+  
+  console.log('✅ Simulation running - endpoints are being called automatically:');
+  console.log(`  - GET /api/users/:id (every 3s)`);
+  console.log(`  - GET /api/users/:id/orders (every 4s)`);
+  console.log(`  - GET /api/users/:id/profile (every 5s - multiple async ops)`);
+  console.log(`  - GET /api/users/:id/error (occasionally - every 6s)`);
+  console.log(`  - GET /health (every 7s)\n`);
+  console.log(`💡 Check /traces.json?format=otlp to see automatic tracing!\n`);
+}
+
+startSimulation();
 

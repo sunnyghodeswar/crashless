@@ -7,7 +7,7 @@
  */
 
 import express from 'express';
-import crashless from '../src/crashless.js';
+import crashless from '../src/index.js';
 
 const PORT = 3003;
 const app = express();
@@ -74,18 +74,50 @@ app.listen(PORT, () => {
   console.log(`   Prometheus: http://localhost:${PORT}/metrics\n`);
 });
 
-// Generate load
-setInterval(() => {
-  fetch(`http://localhost:${PORT}/users/${Math.floor(Math.random() * 5)}`).catch(() => {});
-}, 2000);
+// Automatic simulation - no manual route calling required
+async function startSimulation() {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log('🔄 Starting automatic simulation...\n');
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/users/${Math.floor(Math.random() * 5)}`);
+    } catch {}
+  }, 2000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/slow`);
+    } catch {}
+  }, 5000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/`, {
+        method: 'GET'
+      });
+    } catch {}
+  }, 3000);
+  
+  setInterval(async () => {
+    if (Math.random() > 0.8) {
+      try {
+        await fetch(`http://localhost:${PORT}/error`);
+      } catch {}
+    }
+  }, 4000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: `user${Math.random()}@example.com` })
+      });
+    } catch {}
+  }, 6000);
+}
 
-setInterval(() => {
-  fetch(`http://localhost:${PORT}/slow`).catch(() => {});
-}, 5000);
-
-setInterval(() => {
-  if (Math.random() > 0.8) {
-    fetch(`http://localhost:${PORT}/error`).catch(() => {});
-  }
-}, 4000);
+startSimulation();
 

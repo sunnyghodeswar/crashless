@@ -7,7 +7,7 @@
  */
 
 import express from 'express';
-import crashless from '../src/crashless.js';
+import crashless from '../src/index.js';
 
 const PORT = 3005;
 const app = express();
@@ -64,8 +64,39 @@ app.listen(PORT, () => {
   console.log(`   JSON Metrics: http://localhost:${PORT}/metrics.json\n`);
 });
 
-// Generate load
-setInterval(() => {
-  fetch(`http://localhost:${PORT}/api/products/${Math.floor(Math.random() * 5)}`).catch(() => {});
-}, 2000);
+// Automatic simulation - no manual route calling required
+async function startSimulation() {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  console.log('🔄 Starting automatic simulation...\n');
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/api/products/${Math.floor(Math.random() * 5)}`);
+    } catch {}
+  }, 2000);
+  
+  setInterval(async () => {
+    try {
+      await fetch(`http://localhost:${PORT}/api/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: `Product ${Math.floor(Math.random() * 100)}`, 
+          price: Math.random() * 100 
+        })
+      });
+    } catch {}
+  }, 3500);
+  
+  setInterval(async () => {
+    if (Math.random() > 0.8) {
+      try {
+        await fetch(`http://localhost:${PORT}/api/products/404`);
+      } catch {}
+    }
+  }, 4000);
+}
+
+startSimulation();
 

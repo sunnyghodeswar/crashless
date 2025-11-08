@@ -82,9 +82,17 @@ function formatUptime(ms) {
  * @param {number} status - HTTP status code
  * @param {number} latency - Request latency in milliseconds
  * @param {boolean} skipErrorRecording - If true, skip auto-recording errors (for explicit error handling)
+ * @param {number} timestamp - Optional timestamp (to avoid Date.now() call)
  */
-export function recordRequest(method, path, status, latency, skipErrorRecording = false) {
-  const now = Date.now();
+export function recordRequest(method, path, status, latency, skipErrorRecording = false, timestamp = null) {
+  // Invalidate metrics cache on write
+  if (metricsCache) {
+    metricsCache = null;
+    metricsCacheTime = 0;
+  }
+  
+  // Optimized: Accept timestamp to avoid Date.now() call
+  const now = timestamp !== null ? timestamp : Date.now();
 
   const counter = getRequestCounter(method, path);
   counter.total++;
@@ -138,6 +146,12 @@ export function recordRequest(method, path, status, latency, skipErrorRecording 
 export function recordError(error, meta = {}) {
   if (!error) return; // Guard against null/undefined errors
   
+  // Invalidate metrics cache on write
+  if (metricsCache) {
+    metricsCache = null;
+    metricsCacheTime = 0;
+  }
+  
   const now = Date.now();
   const code = String(error.code || error.status || `ERR_${meta.status || 500}`);
 
@@ -183,9 +197,20 @@ export function recordError(error, meta = {}) {
 
 /**
  * Get metrics snapshot
+ * Optimized: Cache snapshot with TTL to reduce object allocations for dashboard polling
  */
+let metricsCache = null;
+let metricsCacheTime = 0;
+const METRICS_CACHE_TTL = 1000; // Cache for 1 second
+
 export function getMetrics() {
   const now = Date.now();
+  
+  // Return cached metrics if still valid
+  if (metricsCache && (now - metricsCacheTime) < METRICS_CACHE_TTL) {
+    return metricsCache;
+  }
+  
   const uptime = now - registry.uptime.startTime;
 
   const finalizedLatencies = new Map();
@@ -276,6 +301,12 @@ export function getMetrics() {
       latencies: Object.fromEntries(finalizedLatencies),
     },
   };
+  
+  // Cache the result
+  metricsCache = result;
+  metricsCacheTime = now;
+  
+  return result;
 }
 
 /**
