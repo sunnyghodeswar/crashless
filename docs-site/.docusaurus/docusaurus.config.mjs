@@ -42,12 +42,12 @@ export default {
       "classic",
       {
         "docs": {
-          "sidebarPath": "/Users/sunnyg/dev/crashless/docs-site/sidebars.js",
+          "sidebarPath": "/workspace/docs-site/sidebars.js",
           "editUrl": "https://github.com/sunnyghodeswar/crashless/tree/main/docs-site/"
         },
         "blog": false,
         "theme": {
-          "customCss": "/Users/sunnyg/dev/crashless/docs-site/src/css/custom.css"
+          "customCss": "/workspace/docs-site/src/css/custom.css"
         }
       }
     ]
