@@ -50,7 +50,7 @@ Honest documentation of what Crashless does and doesn't do.
 
 ### Performance Limitations
 
-- **Overhead:** 2-30% depending on configuration (not <1% as sometimes claimed)
+- **Overhead:** 2-30% depending on configuration (not less than 1% as sometimes claimed)
 - **Memory:** ~5-20MB typical usage
 - **Scalability:** Not designed for extremely high traffic (>1000 req/s per instance)
 
@@ -72,7 +72,7 @@ Honest documentation of what Crashless does and doesn't do.
 ❌ **Applications requiring full OpenTelemetry** - Limited OTLP support  
 ❌ **Applications needing database auto-instrumentation** - Requires manual work  
 ❌ **Offline environments** - Dashboard requires CDN access  
-❌ **Applications with strict <1% overhead requirement** - Typical overhead is 2-30%  
+❌ **Applications with strict less than 1% overhead requirement** - Typical overhead is 2-30%  
 
 ---
 
@@ -159,7 +159,7 @@ This document provides honest limitations and trade-offs. Crashless prioritizes 
 If you need:
 - Full OpenTelemetry compatibility → Use OpenTelemetry SDK
 - Database auto-instrumentation → Use specialized APM tools
-- <1% overhead → Use minimal configuration or manual error handling
+- Less than 1% overhead → Use minimal configuration or manual error handling
 - Offline dashboard → Use metrics export with custom dashboard
 
 Crashless is a **pragmatic solution** that balances features, simplicity, and performance. It's not trying to replace enterprise APM tools, but rather provide a simple, zero-dependency alternative for teams who want observability without the complexity.
@@ -168,7 +168,7 @@ Crashless is a **pragmatic solution** that balances features, simplicity, and pe
 
 ## Next Steps
 
-- [Architecture](architecture.md) - How Crashless works
-- [Performance Guide](performance.md) - Performance characteristics
-- [Examples](examples.md) - Workarounds and patterns
+- [Architecture](/docs/architecture) - How Crashless works
+- [Performance Guide](/docs/performance) - Performance characteristics
+- [Examples](/docs/examples) - Workarounds and patterns
 

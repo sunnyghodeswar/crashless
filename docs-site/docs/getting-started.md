@@ -126,8 +126,8 @@ app.use(crashless({
 
 ## Next Steps
 
-- [Configuration Guide](configuration.md) - Customize Crashless
-- [API Reference](api-reference.md) - Complete API docs
-- [Examples](examples.md) - Real-world patterns
-- [Performance Guide](performance.md) - Optimization tips
+- [Configuration Guide](/docs/configuration) - Customize Crashless
+- [API Reference](/docs/api-reference) - Complete API docs
+- [Examples](/docs/examples) - Real-world patterns
+- [Performance Guide](/docs/performance) - Optimization tips
 

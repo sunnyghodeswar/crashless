@@ -205,6 +205,6 @@ fs.readFile = function(...args) {
 
 ## Next Steps
 
-- [Performance Guide](performance.md) - Performance optimizations
-- [Limitations](limitations.md) - Known limitations
+- [Performance Guide](/docs/performance) - Performance optimizations
+- [Limitations](/docs/limitations) - Known limitations
 

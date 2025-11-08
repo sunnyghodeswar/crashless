@@ -1,0 +1,24 @@
+{
+  "id": "performance",
+  "title": "Performance Guide",
+  "description": "Complete performance analysis, benchmarks, and optimization strategies for Crashless.",
+  "source": "@site/docs/performance.md",
+  "sourceDirName": ".",
+  "slug": "/performance",
+  "permalink": "/crashless/docs/performance",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/sunnyghodeswar/crashless/tree/main/docs-site/docs/performance.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Examples",
+    "permalink": "/crashless/docs/examples"
+  },
+  "next": {
+    "title": "Security Guide",
+    "permalink": "/crashless/docs/security"
+  }
+}

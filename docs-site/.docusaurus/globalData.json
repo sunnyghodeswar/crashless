@@ -1,0 +1,73 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/crashless/docs",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/crashless/docs",
+          "mainDocId": "index",
+          "docs": [
+            {
+              "id": "api-reference",
+              "path": "/crashless/docs/api-reference",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "architecture",
+              "path": "/crashless/docs/architecture",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "configuration",
+              "path": "/crashless/docs/configuration",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "examples",
+              "path": "/crashless/docs/examples",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "getting-started",
+              "path": "/crashless/docs/getting-started",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "index",
+              "path": "/crashless/docs/",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "limitations",
+              "path": "/crashless/docs/limitations",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "performance",
+              "path": "/crashless/docs/performance",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "security",
+              "path": "/crashless/docs/security",
+              "sidebar": "tutorialSidebar"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "tutorialSidebar": {
+              "link": {
+                "path": "/crashless/docs/",
+                "label": "index"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

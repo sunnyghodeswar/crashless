@@ -1,0 +1,20 @@
+{
+  "id": "limitations",
+  "title": "Limitations & Trade-offs",
+  "description": "Honest documentation of what Crashless does and doesn't do.",
+  "source": "@site/docs/limitations.md",
+  "sourceDirName": ".",
+  "slug": "/limitations",
+  "permalink": "/crashless/docs/limitations",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/sunnyghodeswar/crashless/tree/main/docs-site/docs/limitations.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Architecture",
+    "permalink": "/crashless/docs/architecture"
+  }
+}

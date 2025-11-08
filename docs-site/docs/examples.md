@@ -344,7 +344,7 @@ app.get('/custom-metrics', (req, res) => {
 
 ## Next Steps
 
-- [API Reference](api-reference.md) - Complete API documentation
-- [Configuration Guide](configuration.md) - All configuration options
-- [Performance Guide](performance.md) - Optimization strategies
+- [API Reference](/docs/api-reference) - Complete API documentation
+- [Configuration Guide](/docs/configuration) - All configuration options
+- [Performance Guide](/docs/performance) - Optimization strategies
 
