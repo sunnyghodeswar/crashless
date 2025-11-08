@@ -56,6 +56,9 @@ Thumbs.db
 # Documentation site build
 docs-site/_site/
 docs-site/.jekyll-cache/
+docs-site/.docusaurus/
+docs-site/build/
+docs-site/node_modules/
 
 # Temporary files
 *.tmp
