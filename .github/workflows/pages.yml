@@ -35,6 +35,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: docs-site/package-lock.json
       
+      - name: Verify package-lock.json exists
+        working-directory: ./docs-site
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "ERROR: package-lock.json not found!"
+            exit 1
+          fi
+          echo "✓ package-lock.json found"
+      
       - name: Install dependencies
         working-directory: ./docs-site
         run: npm ci
@@ -42,6 +51,15 @@ jobs:
       - name: Build Docusaurus
         working-directory: ./docs-site
         run: npm run build
+      
+      - name: Verify build output
+        run: |
+          if [ ! -d docs-site/build ]; then
+            echo "ERROR: Build directory not found!"
+            exit 1
+          fi
+          echo "✓ Build directory exists"
+          ls -la docs-site/build/ | head -10
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
