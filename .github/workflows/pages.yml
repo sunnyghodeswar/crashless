@@ -32,8 +32,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: docs-site/package-lock.json
       
       - name: Verify package-lock.json exists
         working-directory: ./docs-site
@@ -43,14 +41,19 @@ jobs:
             exit 1
           fi
           echo "✓ package-lock.json found"
+          ls -lh package-lock.json
       
       - name: Install dependencies
         working-directory: ./docs-site
-        run: npm ci
+        run: |
+          npm ci
+          echo "✓ Dependencies installed"
       
       - name: Build Docusaurus
         working-directory: ./docs-site
-        run: npm run build
+        run: |
+          npm run build
+          echo "✓ Build completed"
       
       - name: Verify build output
         run: |
@@ -59,7 +62,10 @@ jobs:
             exit 1
           fi
           echo "✓ Build directory exists"
+          echo "Build contents:"
           ls -la docs-site/build/ | head -10
+          echo "Total files:"
+          find docs-site/build -type f | wc -l
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
