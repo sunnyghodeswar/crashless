@@ -53,6 +53,19 @@ const config = {
     ],
   ],
 
+  plugins: [
+    [
+      require.resolve('@easyops-cn/docusaurus-search-local'),
+      {
+        hashed: true,
+        highlightSearchTermsOnTargetPage: true,
+        docsRouteBasePath: '/docs',
+        indexBlog: false,
+        language: ['en'],
+      },
+    ],
+  ],
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
@@ -80,6 +93,10 @@ const config = {
           {
             href: 'https://www.npmjs.com/package/crashless',
             label: 'npm',
+            position: 'right',
+          },
+          {
+            type: 'search',
             position: 'right',
           },
         ],
