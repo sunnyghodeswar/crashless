@@ -22,6 +22,7 @@ README_SCREENSHOTS.md
 *.md
 
 # Development documentation
+docs/
 API_CHANGES.md
 COMMIT_MESSAGE.md
 MITIGATION_PLAN.md
@@ -30,10 +31,6 @@ ARCHITECTURE.md
 PERFORMANCE.md
 SECURITY.md
 LIMITATIONS.md
-test/README.md
-scripts/README.md
-examples/README.md
-examples/DASHBOARD_SECURITY.md
 
 # Demo files
 test/manual-demo.js

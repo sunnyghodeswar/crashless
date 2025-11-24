@@ -46,5 +46,5 @@ echo ""
 echo "✅ Benchmark complete!"
 echo "📄 Results saved to: benchmark/results.json"
 echo ""
-echo "💡 Tip: Check benchmark/README.md for interpretation guide"
+echo "💡 Tip: Check docs/contributing/BENCHMARKS.md for interpretation guide"
 

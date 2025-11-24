@@ -279,3 +279,8 @@ curl http://localhost:3011/_crashless  # Should return 404
 
 For more details, see [SECURITY.md](../SECURITY.md).
 
+## Related Documentation
+
+- [Security Guide](../SECURITY.md) - Complete security documentation
+- [Examples Guide](EXAMPLES.md) - Example usage and configurations
+

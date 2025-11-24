@@ -36,11 +36,18 @@
     "url": "https://github.com/sunnyghodeswar/crashless/issues"
   },
   "homepage": "https://github.com/sunnyghodeswar/crashless#readme",
+  "scripts": {
+    "test": "mocha test/**/*.test.js --timeout 10000",
+    "release": "semantic-release"
+  },
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "chai": "^5.3.3",
     "express": "^4.21.2",
     "express-async-errors": "^3.1.1",
     "mocha": "^11.7.4",
+    "semantic-release": "^23.0.0",
     "supertest": "^7.1.4",
     "vegaa": "^1.1.4"
   }

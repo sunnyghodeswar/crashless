@@ -135,7 +135,7 @@ app.get('/users/:id', async (req, res) => {
 
 **Key Insight:** Crashless is **~2.2× faster** than express-async-errors with full observability.
 
-[Run benchmarks yourself →](benchmark/README.md)
+[Run benchmarks yourself →](docs/contributing/BENCHMARKS.md)
 
 ---
 
