@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/sunnyghodeswar/crashless/compare/v0.3.0...v0.4.0) (2025-11-24)
+
+
+### Features
+
+* revamp README and docs to better showcase features ([20ee151](https://github.com/sunnyghodeswar/crashless/commit/20ee151213f3674082e52ca96fe4f7d95ff0fd64))
+
 # [0.3.0](https://github.com/sunnyghodeswar/crashless/compare/v0.2.1...v0.3.0) (2025-11-24)
 
 
