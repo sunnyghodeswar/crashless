@@ -13,16 +13,17 @@ docs/
 ├── PERFORMANCE.md               # Performance guide
 ├── SECURITY.md                  # Security documentation
 │
-├── development/                 # Development & release docs
-│   ├── CI_CD.md                 # CI/CD workflow setup
-│   ├── RELEASE_CONFIG.md        # Semantic-release configuration
-│   └── RELEASE_CHECKLIST.md     # Pre-release checklist
-│
 └── contributing/                # Contributing guides
     ├── BENCHMARKS.md            # Benchmarking guide
     ├── DASHBOARD_SECURITY.md    # Dashboard security examples
     ├── EXAMPLES.md              # Example usage guide
     └── TESTING.md               # Testing guide
+
+.github/docs/                    # CI/CD & operational docs (implementation)
+├── CI_CD.md                     # GitHub Actions workflow setup
+├── RELEASE_CONFIG.md            # Semantic-release configuration
+├── RELEASE_CHECKLIST.md         # Pre-release checklist
+└── TROUBLESHOOTING.md           # CI/CD troubleshooting
 ```
 
 ## Documentation Types
@@ -35,12 +36,6 @@ Located in `docs/` root:
 - **PERFORMANCE.md** - Performance characteristics and optimization
 - **SECURITY.md** - Security features and best practices
 
-### Development Documentation
-Located in `docs/development/`:
-- **CI_CD.md** - GitHub Actions workflow, npm publishing setup
-- **RELEASE_CONFIG.md** - Semantic-release configuration guide
-- **RELEASE_CHECKLIST.md** - Pre-release verification checklist
-
 ### Contributing Documentation
 Located in `docs/contributing/`:
 - **BENCHMARKS.md** - How to run and interpret benchmarks
@@ -52,8 +47,8 @@ Located in `docs/contributing/`:
 
 All documentation has been moved from various locations to the `docs/` folder:
 
-- `.github/README.md` → `docs/development/CI_CD.md`
-- `.releaserc-README.md` → `docs/development/RELEASE_CONFIG.md`
+- `.github/README.md` → `.github/docs/CI_CD.md`
+- `.releaserc-README.md` → `.github/docs/RELEASE_CONFIG.md`
 - `test/README.md` → `docs/contributing/TESTING.md`
 - `benchmark/README.md` → `docs/contributing/BENCHMARKS.md`
 - `examples/README.md` → `docs/contributing/EXAMPLES.md`
@@ -64,6 +59,12 @@ All documentation has been moved from various locations to the `docs/` folder:
 - **Main Index**: [docs/README.md](README.md)
 - **External Docs**: [Documentation Site](https://sunnyghodeswar.github.io/crashless/)
 - **Root README**: [../README.md](../README.md) - Quick start and overview
+
+## Documentation Locations
+
+- **Architecture & Design**: `docs/` - Core documentation for users and contributors
+- **CI/CD & Operations**: `.github/docs/` - Implementation and operational docs
+- **External Docs**: [Documentation Site](https://sunnyghodeswar.github.io/crashless/) - Public-facing documentation
 
 ## NPM Package
 

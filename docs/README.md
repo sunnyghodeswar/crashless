@@ -12,12 +12,6 @@ Complete documentation for the Crashless observability middleware.
 - **[Security](SECURITY.md)** - Security features and best practices
 - **[Limitations](LIMITATIONS.md)** - Known limitations and workarounds
 
-### Development & Release
-
-- **[CI/CD Setup](development/CI_CD.md)** - GitHub Actions workflow and npm publishing
-- **[Release Configuration](development/RELEASE_CONFIG.md)** - Semantic release setup and versioning
-- **[Release Checklist](development/RELEASE_CHECKLIST.md)** - Pre-release verification checklist
-
 ### Contributing
 
 - **[Testing Guide](contributing/TESTING.md)** - How to run and write tests
