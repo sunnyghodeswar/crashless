@@ -40,13 +40,7 @@ app.listen(3000);
 
 ---
 
-## 🎮 Try It Live | 📚 Documentation
-
-<table>
-<tr>
-<td width="50%">
-
-### 🎮 Interactive Examples
+## 🎮 Try It Live
 
 **[▶️ One-Liner Setup](https://stackblitz.com/github/sunnyghodeswar/crashless-examples?file=examples%2Fexample-one-liner.js)**  
 Simplest possible setup
@@ -72,10 +66,7 @@ git clone https://github.com/sunnyghodeswar/crashless-examples.git
 cd crashless-examples && npm install
 ```
 
-</td>
-<td width="50%">
-
-### 📚 Documentation
+## 📚 Documentation
 
 **[📖 Complete Docs](https://sunnyghodeswar.github.io/crashless/)**  
 Full documentation site
@@ -94,10 +85,6 @@ Common use cases & patterns
 
 **[⚡ Performance](https://sunnyghodeswar.github.io/crashless/performance)**  
 Benchmarks & optimization
-
-</td>
-</tr>
-</table>
 
 ---
 
