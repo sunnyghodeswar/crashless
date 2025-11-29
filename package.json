@@ -1,6 +1,6 @@
 {
   "name": "crashless",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Production-ready observability for Node.js. Zero npm-dependency middleware that prevents Express servers from crashing and provides built-in monitoring.",
   "type": "module",
   "main": "src/index.js",

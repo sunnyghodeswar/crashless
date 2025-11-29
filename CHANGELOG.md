@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/sunnyghodeswar/crashless/compare/v0.4.0...v0.4.1) (2025-11-29)
+
+
+### Bug Fixes
+
+* **readme:** fix table formatting in Try It Live and Documentation sections ([e8753e1](https://github.com/sunnyghodeswar/crashless/commit/e8753e1c4547c34ab4a96ff53a705c155bc1579a))
+
 # [0.4.0](https://github.com/sunnyghodeswar/crashless/compare/v0.3.0...v0.4.0) (2025-11-24)
 
 
